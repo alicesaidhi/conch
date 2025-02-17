@@ -7,6 +7,7 @@ local create_vm = require "../luau_packages/vm"
 local ctypes = require "../luau_packages/types"
 local intel = require "../luau_packages/intel"
 local net = require "./net"
+local signal = require "./signal"
 local state = require "./state"
 local types = require "./types"
 local user = require "./user"
@@ -16,6 +17,7 @@ local IS_SERVER = RunService:IsServer()
 local vm_state = { locals = {}, upvalues = {}, instructions = {} }
 local vm = create_vm() :: ctypes.VirtualMachine
 local commands: { [string]: types.CommandRepresentation } = {}
+local after_run = signal()
 
 local console: types.Console = {
 	vm = vm,
@@ -157,6 +159,7 @@ local function register_command<T...>(
 	}
 
 	commands[name] = representation
+
 	vm.commands[name] = function(...)
 		local custom = { ... }
 
@@ -183,7 +186,19 @@ local function register_command<T...>(
 			end
 		end
 
-		return info.callback(unpack(custom))
+		local results = { pcall(info.callback, unpack(custom)) }
+		local ok = table.remove(results, 1)
+
+		after_run:fire {
+			ok = ok,
+			command = name,
+			arguments = custom,
+			result = results,
+		}
+
+		if not ok then error(results[2]) end
+
+		return unpack(results)
 	end
 
 	if IS_SERVER then
@@ -241,6 +256,7 @@ return {
 	execute = execute,
 	analyze = analyze,
 	write_global = write_global,
+	after_command_run = after_run,
 
 	register_type = register_type,
 	get_type = get_type,

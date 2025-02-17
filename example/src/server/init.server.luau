@@ -17,6 +17,8 @@ conch.register("test", {
 	callback = function(player) end,
 })
 
+conch.after_command_run(function(result_context) end)
+
 local function playeradded(player: Player)
 	local user = conch.get_user(player)
 

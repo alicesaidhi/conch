@@ -99,6 +99,12 @@ local function invoke_server_command(
 	local pop = create_command_context(user, data.invoke_id)
 
 	local function handle(ok: boolean, ...: any)
+		console.after_command_run:fire {
+			ok = ok,
+			command = data.name,
+			arguments = data.args,
+			result = { ... },
+		}
 		pop()
 		if not ok then
 			warn(...)
@@ -179,6 +185,13 @@ return {
 
 	register_quick = console.register_quick,
 	register = console.register_command,
+	after_command_run = function(callback: (
+		types.AfterCommandRunContext
+	) -> () -> ())
+		local connection =
+			console.after_command_run:connect(callback :: (...any) -> ())
+		return function() connection:disconnect() end
+	end,
 
 	initiate_default_lifecycle = initiate_default_lifecycle,
 	has_permissions = user.has_permissions,

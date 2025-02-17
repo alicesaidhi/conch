@@ -21,6 +21,7 @@ local function create_signal<T...>(): types.Signal<T...>
 		end
 
 		self.disconnect = disconnect
+		table.insert(connections, self)
 
 		return self
 	end

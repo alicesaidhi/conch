@@ -37,6 +37,13 @@ export type CommandContext = {
 	read invocation_id: number | false,
 }
 
+export type AfterCommandRunContext = {
+	ok: boolean,
+	command: string,
+	arguments: { unknown },
+	result: { unknown },
+}
+
 export type CommandRepresentation = {
 	read name: string,
 	read permissions: { string },
