@@ -9,6 +9,7 @@ export type TokenKindText = | "identifier" | "number" | "string" | "error"
 
 export type TokenKindRest =
 	-- OPERATORS
+	| "-"
 	| "."
 	| "="
 	| "$"
@@ -327,7 +328,7 @@ local function parse(input: buffer, can_yield: boolean?)
 	end
 
 	local function is_digit(c: number): boolean
-		return char "0" <= c and c <= char "9"
+		return char "-9" <= c and c <= char "9"
 	end
 
 	local function is_alpha(c: number): boolean
@@ -481,6 +482,16 @@ local function parse(input: buffer, can_yield: boolean?)
 			else
 				bump()
 				return "."
+			end
+		elseif c == char "-" then
+			bump()
+			c = peek()
+
+			if is_digit(c) then
+				return number()
+			else
+				bump()
+				return "-"
 			end
 		elseif c == char "=" then
 			bump()
