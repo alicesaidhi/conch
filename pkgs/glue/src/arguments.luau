@@ -54,7 +54,11 @@ local stringsT = {
 }
 
 local numberT = {
-	convert = noop,
+	convert = function(input)
+		local n = tonumber(input)
+		if n == nil then error(`{input} is not a valid number`) end
+		return n
+	end,
 
 	analysis = {
 		kind = "argument",
@@ -65,7 +69,16 @@ local numberT = {
 }
 
 local numbersT = {
-	convert = wrap_if_not,
+	convert = function(input)
+		local input = wrap_if_not(input)
+		local copy = {}
+		for idx, value in input do
+			local n = tonumber(input)
+			if n == nil then error(`{input} is not a valid number`) end
+			copy[idx] = n
+		end
+		return copy
+	end,
 
 	analysis = {
 		kind = "argument",
@@ -242,6 +255,9 @@ local function enum_map<V>(
 				for key in map do
 					if string.sub(key:lower(), 1, #text) ~= text then
 						continue
+					end
+					if string.find(key, "[^%w_-]") then
+						key = string.format("%q", key)
 					end
 					table.insert(suggestions, key)
 				end

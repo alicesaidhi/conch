@@ -386,6 +386,12 @@ local function parse(input: buffer, can_yield: boolean?)
 		local base = 10
 
 		local c: number = peek()
+		local has_sign = false
+
+		if c == char "-" then
+			c = bump_peek()
+			has_sign = true
+		end
 
 		if c == char "0" then
 			c = bump_peek()
@@ -407,8 +413,11 @@ local function parse(input: buffer, can_yield: boolean?)
 		if base == 10 then
 			text = buffer.readstring(input, start, pos - start) :: string
 		else
-			text =
-				buffer.readstring(input, start + 2, pos - start - 2) :: string
+			text = buffer.readstring(
+				input,
+				start + 2 + if has_sign then 1 else 0,
+				pos - start - 2 - if has_sign then 1 else 0
+			) :: string
 		end
 
 		text = string.gsub(text, "_", "")
@@ -466,7 +475,7 @@ local function parse(input: buffer, can_yield: boolean?)
 			end
 
 			return "identifier"
-		elseif is_digit(c :: number) then
+		elseif is_digit(c :: number) or c == char "-" then
 			return number()
 		elseif c == char '"' then
 			return quoted_string()

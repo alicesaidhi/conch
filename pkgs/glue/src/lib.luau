@@ -101,6 +101,7 @@ local function invoke_server_command(
 	local function handle(ok: boolean, ...: any)
 		console.after_command_run:fire {
 			ok = ok,
+			who = user,
 			command = data.name,
 			arguments = data.args,
 			result = { ... },
