@@ -1,0 +1,19 @@
+name = "alicesaidhi/conch_ui"
+version = "0.2.5-rc.1"
+includes = ["src/**", "pesde.toml"]
+
+[target]
+environment = "roblox"
+lib = "src/lib.luau"
+build_files = ["src"]
+
+[indices]
+default = "https://github.com/daimond113/pesde-index"
+
+[wally_indices]
+default = "https://github.com/UpliftGames/wally-index"
+
+[dependencies]
+vide = { wally = "wally#centau/vide", version = "^0.3.1" }
+ast = { workspace = "alicesaidhi/conch_ast", version = "^", target = "roblox" }
+conch = { workspace = "alicesaidhi/conch", version = "^" }

@@ -325,6 +325,7 @@ local function get_order()
 	local mapped: { [string]: PesdeToml } = {}
 
 	for index, package in packages do
+		if package:find "_foreign" then continue end
 		local path = "./pkgs/" .. package
 		local file = fs.readFile(path .. "/pesde.toml")
 		local pesde_toml: PesdeToml = serde.decode("toml", file)
