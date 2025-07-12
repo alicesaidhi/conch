@@ -11,4 +11,3 @@ build_files = ["src"]
 default = "https://github.com/daimond113/pesde-index"
 
 [dependencies]
-types = { workspace = "alicesaidhi/conch_types", version = "^" }
