@@ -31,7 +31,15 @@ local function to_span(
 			or b and b.y
 			or a and a.y
 			or 0,
-		0
+		a and a.z
+			or b and b.z
+			or c and c.z
+			or d and d.z
+			or e and e.z
+			or f and f.z
+			or g and g.z
+			or h and h.z
+			or 0
 	)
 end
 
@@ -42,7 +50,7 @@ export type Issue = {
 
 export type Output = { issues: { Issue }, result: ast.Ast }
 
-local function parse(input: buffer): ast.Output
+local function parse(input: buffer): Output
 	local pos = 0
 	local line = 0
 	local len = buffer.len(input)
@@ -74,7 +82,7 @@ local function parse(input: buffer): ast.Output
 	end
 
 	local function panic(msg: string?): never
-		if msg then table.insert(issues, { why = msg }) end
+		if msg then table.insert(issues, { why = msg, span = vector.zero }) end
 		error {
 			result = nil,
 			issues = issues,
@@ -83,7 +91,10 @@ local function parse(input: buffer): ast.Output
 
 	local function eof(msg: string)
 		if pos >= len then
-			table.insert(issues, { why = msg, span = vector.create(pos, pos) })
+			table.insert(
+				issues,
+				{ why = msg, span = vector.create(pos, pos, line) }
+			)
 			error({
 				result = nil,
 				issues = issues,
@@ -389,17 +400,19 @@ local function parse(input: buffer): ast.Output
 
 	local function next_token()
 		local start = pos
+		local initial_line = line
 		local kind = read_kind()
 
 		while kind == "whitespace" or kind == "comment" do
 			start = pos
+			initial_line = line
 			kind = read_kind()
 		end
 
 		return {
 			kind = kind,
 			text = buffer.readstring(input, start, pos - start),
-			span = vector.create(start, pos, 0),
+			span = vector.create(start, pos, initial_line),
 		}
 	end
 
@@ -435,7 +448,6 @@ local function parse(input: buffer): ast.Output
 
 	local function lookahead_is(kind: ast.TokenKindText | ast.TokenKindRest)
 		while lookahead_kind == "\n" do
-			print(debug.traceback())
 			lookahead_token = next_token()
 			lookahead_kind = lookahead_token.kind
 			lookahead_pos = lookahead_token.span.x
@@ -537,15 +549,19 @@ local function parse(input: buffer): ast.Output
 		do
 			skip_current()
 
-			local start = current_pos
+			local current_column = current_pos
+			local current_line = line
 			local value = fn()
-			if not current_is "," then break end
-			local separator = expect_fatal ","
+			local separator = if current_is "," then expect "," else nil
 
 			table.insert(values, {
 				value = value,
 				separator = separator,
-				span = vector.create(start, separator.span.y),
+				span = vector.create(
+					current_column,
+					separator and separator.span.y or current_column,
+					current_line
+				),
 			})
 		end
 
@@ -556,7 +572,11 @@ local function parse(input: buffer): ast.Output
 		local start = current_pos
 		local body = {}
 
-		while not current_is "eof" and not is_delimiter() do
+		while not current_is "eof" and not is_delimiter() or current_is ";" do
+			while current_kind == ";" do
+				consume()
+			end
+
 			skip_current()
 
 			if current_kind == "if" then
@@ -1075,23 +1095,32 @@ local function parse(input: buffer): ast.Output
 					kind = "unary",
 					operator = unary,
 					value = righthandside,
-					span = to_span(unary.span, righthandside.span),
+					span = to_span(
+						unary.span,
+						righthandside and righthandside.span
+					),
 				}
 			elseif current_is "(" then
 				local expression =
 					parse_delimiter("(", ")", parse_expression_command)
 
-				if not expression then return panic "no expression" end
+				assert(expression)
 
-				return {
+				local node: ast.ExpressionEvaluate = {
 					kind = "evaluate",
 					command = expression,
 					span = to_span(
-						expression.left and expression.left.span,
-						expression.value and expression.value.span,
-						expression.right and expression.right.span
+						expression and expression.left and expression.left.span,
+						expression
+							and expression.value
+							and expression.value.span,
+						expression
+							and expression.right
+							and expression.right.span
 					),
 				}
+
+				return node
 			elseif current_is "nil" then
 				local token = expect_fatal "nil"
 				local node: ast.ExpressionNil =
@@ -1124,10 +1153,17 @@ local function parse(input: buffer): ast.Output
 			elseif current_is "&" then
 				local token = expect_fatal "&"
 				throw(
-					"you are not allowed to run a command within this context. please delimit with () before calling a command",
+					"you are not allowed to run a command here due to ambiguous syntax. please wrap the command with ()",
 					token.span
 				)
 				return expected_but(`expression`)
+			elseif current_binary_operator() then
+				throw(
+					"you are not allowed to use binary operators here due to ambiguous syntax. please wrap the expression with ()",
+					current_token.span
+				)
+				consume()
+				return nil
 			else
 				return expected_but(`expression`)
 			end

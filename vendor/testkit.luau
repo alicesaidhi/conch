@@ -517,10 +517,13 @@ local function shallow_eq(a: {}, b: {}): boolean
 	return true
 end
 
-local function deep_eq(a: {}, b: {}): boolean
+local function deep_eq(a: any, b: any): boolean
+	if type(a) ~= type(b) then return false end
+	if type(a) ~= "table" or type(b) ~= "table" then return a == b end
+
 	if #a ~= #b then return false end
 
-	for i, v in next, a do
+	for i, v in a do
 		if type(b[i]) == "table" and type(v) == "table" then
 			if deep_eq(b[i], v) == false then return false end
 		elseif b[i] ~= v then
@@ -528,7 +531,7 @@ local function deep_eq(a: {}, b: {}): boolean
 		end
 	end
 
-	for i, v in next, b do
+	for i, v in b do
 		if type(a[i]) == "table" and type(v) == "table" then
 			if deep_eq(a[i], v) == false then return false end
 		elseif a[i] ~= v then

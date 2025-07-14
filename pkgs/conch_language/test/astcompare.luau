@@ -222,9 +222,7 @@ function compare_expression(a: ast.Expression, b: ast.Expression)
 			generate_separated(compare_expression)
 		)
 	else
-		error(
-			`unreachable - unsupported {a.kind} {b.kind} {b.token.kind} {b.span}`
-		)
+		error(`unreachable - unsupported {a.kind} {b.kind} {b.span}`)
 	end
 end
 

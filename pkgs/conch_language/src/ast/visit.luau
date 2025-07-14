@@ -612,6 +612,7 @@ local function visit_ast<State>(
 end
 
 return {
+	visit_block = visit_block,
 	visit_ast = visit_ast,
 	create_visitor = create_visitor,
 }
