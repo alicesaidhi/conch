@@ -1,360 +1,4 @@
-export type Span = vector
-
-export type Token<T = TokenKindText | TokenKindRest> = {
-	read kind: T,
-	read text: string,
-	read span: Span,
-}
-
-export type TokenKindText = "identifier" | "string" | "number" | "error"
-
-export type BinaryOperator =
-	-- operators
-	| "=="
-	| "!="
-	| "~="
-	| ">"
-	| "<"
-	| ">="
-	| "<="
-	-- arithmetic
-	| "*"
-	| "/"
-	| "-"
-	| "+"
-	| "//"
-	| "^"
-	| "%"
-	| ".."
-
-export type UnaryOperator = | "-" | "not"
-
-export type TokenKindRest =
-	| BinaryOperator
-	| UnaryOperator
-	-- symbols
-	| "&"
-	| "="
-	| "("
-	| ")"
-	| "$"
-	| ","
-	| "{"
-	| "}"
-	| "["
-	| "]"
-	| "|"
-	| "."
-	| ".."
-	-- keywords
-	| "and"
-	| "or"
-	| "true"
-	| "false"
-	| "nil"
-	| "if"
-	| "else"
-	| "elseif"
-	| "while"
-	| "else"
-	| "while"
-	| "for"
-	| "return"
-	| "break"
-	| "continue"
-	| "end"
-	-- line endings
-	| "\n"
-	| ";"
-	-- whitespace
-	| "eof"
-	| "whitespace"
-	| "comment"
-
-export type TokenKind = TokenKindRest | TokenKindText
-
-export type Issue = {
-	read why: string,
-	read span: vector,
-}
-
-export type Separated<T> = {
-	{
-		value: T,
-		separator: Token<",">?,
-		span: Span,
-	}
-}
-
-export type Delimited<LEFT, VALUE, RIGHT> = {
-	read left: Token<LEFT>,
-	read value: VALUE,
-	read right: Token<RIGHT>?,
-}
-
-export type AstExpressionNilNode = {
-	read kind: "nil",
-	read token: Token<"nil">,
-	read span: Span,
-}
-
-export type AstExpressionBooleanNode = {
-	read kind: "boolean",
-	read token: Token<"true"> | Token<"false">,
-	read span: Span,
-}
-
-export type AstExpressionNumberNode = {
-	read kind: "number",
-	read token: Token<"number">,
-	read span: Span,
-}
-
-export type AstExpressionBinaryNode = {
-	read kind: "binary",
-	read left: AstExpression,
-	read operator: Token<BinaryOperator>,
-	read right: AstExpression?,
-	read span: Span,
-}
-
-export type AstExpressionStringNode = {
-	read kind: "string",
-	read token: Token<"string">,
-	read span: Span,
-}
-
-export type AstExpressionLambdaNode = {
-	read kind: "lambda",
-	read span: Span,
-	read body: AstFunctionBody,
-}
-
-export type AstFunctionBody = {
-	read arguments: Delimited<
-		"|",
-		Separated<Token<"identifier"> | false>,
-		"|"
-	>,
-	read block: Delimited<"{", AstBlock, "}">?,
-	read span: Span,
-}
-
-export type AstExpressionVectorNode = {
-	read kind: "vector",
-	read contents: Delimited<"[", Separated<AstExpression>, "]">,
-	read span: Span,
-}
-
-export type AstExpressionUnaryNode = {
-	read kind: "unary",
-	read operator: Token<UnaryOperator>,
-	read value: AstExpression?,
-	read span: Span,
-}
-
-export type AstExpressionEvaluateNode = {
-	read kind: "evaluate",
-	read command: Delimited<"(", AstExpression, ")">,
-	read span: Span,
-}
-
-export type AstCommand = {
-	read kind: "command",
-	read span: Span,
-	read var: AstVarNode,
-	read arguments: { AstExpression },
-}
-
-export type AstExpressionCommand = {
-	read kind: "command",
-	read prefix: Token<"&">,
-	read command: AstCommand?,
-	read span: Span,
-}
-
-export type AstExpression =
-	| AstExpressionNilNode
-	| AstExpressionBooleanNode
-	| AstExpressionNumberNode
-	| AstExpressionStringNode
-	| AstExpressionTable
-	| AstExpressionLambdaNode
-	| AstExpressionEvaluateNode
-	| AstVarNode
-	| AstExpressionUnaryNode
-	| AstExpressionVectorNode
-	| AstExpressionBinaryNode
-	| AstExpressionCommand
-export type AstVarRootGlobalNode = {
-	read kind: "global",
-	read token: Token<"identifier">,
-	read span: Span,
-}
-
-export type AstVarRootVariableNode = {
-	read kind: "name",
-	read span: Span,
-	read var: Token<"$">,
-	read name: Token<"identifier">?,
-}
-
-export type AstVarRootParenNode = {
-	read kind: "paren",
-	read span: Span,
-	read var: Token<"$">,
-	read node: Delimited<"(", AstExpression?, ")">,
-}
-
-export type AstVarRoot =
-	| AstVarRootGlobalNode
-	| AstVarRootVariableNode
-	| AstVarRootParenNode
-
-export type AstVarSuffixNameIndexNode = {
-	read kind: "name_index",
-	read span: Span,
-	read period: Token<".">,
-	read name: Token<"identifier">?,
-}
-
-export type AstVarSuffixExpressionIndexNode = {
-	read kind: "expression_index",
-	read span: Span,
-	read node: Delimited<"[", AstExpression, "]">,
-}
-
-export type AstVarSuffixNode =
-	| AstVarSuffixNameIndexNode
-	| AstVarSuffixExpressionIndexNode
-
-export type AstVarNode = {
-	read kind: "var",
-	read root: AstVarRoot,
-	read suffixes: { AstVarSuffixNode },
-	read span: Span,
-}
-
-export type AstTableFieldNameKey = {
-	read kind: "name_key",
-	read name: Token<"identifier">,
-	read equals: Token<"=">,
-	read value: AstExpression?,
-	read span: Span,
-}
-
-export type AstTableFieldExpressionKey = {
-	read kind: "expression_key",
-
-	read key: Delimited<"[", AstExpression?, "]">?,
-	read equals: Token<"=">?,
-	read value: AstExpression?,
-
-	read span: Span,
-}
-export type AstTableFieldNoKey = {
-	read kind: "nokey",
-	read value: AstExpression?,
-
-	read span: Span,
-}
-
-export type AstTableField =
-	| AstTableFieldNoKey
-	| AstTableFieldExpressionKey
-	| AstTableFieldNameKey
-
-export type AstExpressionTable = {
-	read kind: "table",
-	read values: Delimited<"{", Separated<AstTableField>, "}">,
-	read span: Span,
-}
-
-export type AstAssignNode = {
-	read kind: "assign",
-	read identifier: Token<"identifier">,
-	read equals: Token<"=">,
-	read value: AstExpression?,
-	read span: Span,
-}
-
-export type AstContinueNode = {
-	read kind: "continue",
-	read token: Token<"continue">,
-	read span: Span,
-}
-
-export type AstBreakNode = {
-	read kind: "break",
-	read token: Token<"break">,
-	read span: Span,
-}
-export type AstReturn = {
-	read kind: "return",
-	read token: Token<"return">,
-	read values: Separated<AstExpression>,
-	read span: Span,
-}
-
-export type AstLastStatement = | AstContinueNode | AstBreakNode | AstReturn
-
-export type AstIfBranch = {
-	read condition: Delimited<"(", (AstExpression)?, ")">?,
-	read block: Delimited<"{", AstBlock, "}">?,
-	read span: Span,
-}
-
-export type AstIfElseBranch = {
-	read ifelse: Token<"elseif">,
-	read branch: AstIfBranch,
-	read span: Span,
-}
-
-export type AstElseBranch = {
-	read token: Token<"else">,
-	read block: Delimited<"{", AstBlock, "}">?,
-	read span: Span,
-}
-
-export type AstIf = {
-	read kind: "if",
-	read token: Token<"if">,
-
-	read first_branch: AstIfBranch,
-	read branches: { AstIfElseBranch }?,
-
-	read else_branch: AstElseBranch?,
-
-	read span: Span,
-}
-
-export type AstWhile = {
-	read kind: "while",
-	read token: Token<"while">,
-	read condition: Delimited<"(", (AstExpression | AstCommand)?, ")">?,
-	read block: Delimited<"{", AstBlock, "}">?,
-	read span: Span,
-}
-
-export type AstFor = {
-	read kind: "for",
-	read token: Token<"for">,
-	read expression: Delimited<"(", (AstExpression | AstCommand)?, ")">?,
-	read body: AstFunctionBody?,
-	read span: Span,
-}
-
-export type AstStatement = | AstIf | AstWhile | AstFor | AstCommand
-
-export type AstBlock = {
-	read body: { AstStatement },
-	read last_statement: AstLastStatement?,
-	read span: Span,
-}
-
-export type Ast = {
-	block: AstBlock,
-}
+local ast = require "./ast"
 
 local function char(c: string): number return string.byte(c) :: number end
 
@@ -391,7 +35,14 @@ local function to_span(
 	)
 end
 
-local function parse(input: buffer)
+export type Issue = {
+	read why: string,
+	read span: vector,
+}
+
+export type Output = { issues: { Issue }, result: ast.Ast }
+
+local function parse(input: buffer): ast.Output
 	local pos = 0
 	local line = 0
 	local len = buffer.len(input)
@@ -423,7 +74,7 @@ local function parse(input: buffer)
 	end
 
 	local function panic(msg: string?): never
-		table.insert(issues, { why = msg })
+		if msg then table.insert(issues, { why = msg }) end
 		error {
 			result = nil,
 			issues = issues,
@@ -510,12 +161,6 @@ local function parse(input: buffer)
 		local base = 10
 
 		local c: number = peek()
-		local has_sign = false
-
-		if c == char "-" then
-			c = bump_peek()
-			has_sign = true
-		end
 
 		if c == char "0" then
 			c = bump_peek()
@@ -547,11 +192,8 @@ local function parse(input: buffer)
 		if base == 10 then
 			text = buffer.readstring(input, start, pos - start) :: string
 		else
-			text = buffer.readstring(
-				input,
-				start + 2 + if has_sign then 1 else 0,
-				pos - start - 2 - if has_sign then 1 else 0
-			) :: string
+			text =
+				buffer.readstring(input, start + 2, pos - start - 2) :: string
 		end
 
 		text = string.gsub(text, "_", "")
@@ -563,7 +205,7 @@ local function parse(input: buffer)
 		end
 	end
 
-	local function read_kind(): TokenKindRest | TokenKindText
+	local function read_kind(): ast.TokenKindRest | ast.TokenKindText
 		local c: number = peek()
 
 		if c == 0 then return "eof" end
@@ -585,13 +227,14 @@ local function parse(input: buffer)
 				bump()
 				return "!="
 			else
-				return "error"
+				return "!"
 			end
 		elseif c == char "~" then
 			bump()
 			c = peek()
 
 			if c == char "=" then
+				bump()
 				return "~="
 			else
 				return "error"
@@ -601,6 +244,7 @@ local function parse(input: buffer)
 			c = peek()
 
 			if c == char "=" then
+				bump()
 				return ">="
 			else
 				return ">"
@@ -610,6 +254,7 @@ local function parse(input: buffer)
 			c = peek()
 
 			if c == char "=" then
+				bump()
 				return "<="
 			else
 				return "<"
@@ -622,16 +267,20 @@ local function parse(input: buffer)
 			c = peek()
 
 			if c == char "/" then
+				bump()
 				return "//"
 			else
 				return "/"
 			end
+		elseif c == char "^" then
+			bump()
+			return "^"
+		elseif c == char "%" then
+			bump()
+			return "%"
 		elseif c == char "-" then
-			if is_digit(peek_2()) or peek_2() == char "." then
-				return number()
-			else
-				return "-"
-			end
+			bump()
+			return "-"
 		elseif c == char "+" then
 			bump()
 			return "+"
@@ -647,6 +296,9 @@ local function parse(input: buffer)
 		elseif c == char "," then
 			bump()
 			return ","
+		elseif c == char "&" then
+			bump()
+			return "&"
 		elseif c == char "{" then
 			bump()
 			return "{"
@@ -689,6 +341,12 @@ local function parse(input: buffer)
 				return "false"
 			elseif value == "nil" then
 				return "nil"
+			elseif value == "if" then
+				return "if"
+			elseif value == "else" then
+				return "else"
+			elseif value == "elseif" then
+				return "elseif"
 			elseif value == "while" then
 				return "while"
 			elseif value == "for" then
@@ -699,8 +357,10 @@ local function parse(input: buffer)
 				return "break"
 			elseif value == "continue" then
 				return "continue"
-			elseif value == "end" then
-				return "end"
+			elseif value == "and" then
+				return "and"
+			elseif value == "or" then
+				return "or"
 			end
 
 			return "identifier"
@@ -709,10 +369,18 @@ local function parse(input: buffer)
 		elseif c == char "." and is_digit(peek_2()) then
 			return number()
 		elseif c == char "." then
-			return "."
+			bump()
+			c = peek()
+
+			if c == char "." then
+				bump()
+				return ".."
+			else
+				return "."
+			end
 		elseif is_whitespace(c) then
 			bump()
-			return read_kind()
+			return "whitespace"
 		end
 
 		bump()
@@ -738,6 +406,7 @@ local function parse(input: buffer)
 	local current_token = next_token()
 	local current_kind = current_token.kind
 	local current_pos = current_token.span.x
+
 	local lookahead_token = next_token()
 	local lookahead_kind = lookahead_token.kind
 	local lookahead_pos = lookahead_token.span.x
@@ -758,22 +427,24 @@ local function parse(input: buffer)
 		end
 	end
 
-	local function current_is(kind: TokenKindText | TokenKindRest)
+	local function current_is(kind: ast.TokenKindText | ast.TokenKindRest)
 		skip_current()
 
 		return current_kind == kind
 	end
 
-	local function lookahead_is(kind: TokenKindText | TokenKindRest)
+	local function lookahead_is(kind: ast.TokenKindText | ast.TokenKindRest)
 		while lookahead_kind == "\n" do
+			print(debug.traceback())
 			lookahead_token = next_token()
 			lookahead_kind = lookahead_token.kind
+			lookahead_pos = lookahead_token.span.x
 		end
 
 		return lookahead_kind == kind
 	end
 
-	local function display(token: Token): string
+	local function display(token: ast.Token): string
 		local kind = token.kind
 
 		if kind == "identifier" or kind == "number" or kind == "string" then
@@ -795,19 +466,21 @@ local function parse(input: buffer)
 	end
 
 	local function expect<T>(
-		kind: T & (TokenKindText | TokenKindRest)
-	): Token<T> | false
+		kind: T & (ast.TokenKindText | ast.TokenKindRest)
+	): ast.Token<T> | false
 		if current_is(kind) then
 			return consume() :: any
 		else
-			expected_but(display({ kind = kind } :: any))
+			expected_but(kind :: any)
 			return false
 		end
 	end
 
 	local function expect_fatal<T>(
-		kind: T & (TokenKindText | TokenKindRest)
-	): Token<T>
+		kind: T & (
+			ast.TokenKindText | ast.TokenKindRest
+		)
+	): ast.Token<T>
 		if current_is(kind) then
 			return consume() :: any
 		else
@@ -827,32 +500,41 @@ local function parse(input: buffer)
 			or current_kind == "]"
 			or current_kind == ")"
 			or current_kind == ";"
+			or current_kind == "\n"
 			or current_kind == "eof"
 	end
 
-	local parse_block_node: () -> AstBlock
-	local parse_statement_node: () -> AstStatement
-	local parse_last_statement: () -> AstLastStatement?
-	local parse_expression: (allow_call: boolean) -> AstExpression
-	local parse_expression_command: () -> AstExpression
-	local parse_delimiter: <L, V, R>(L, R, fn: () -> V) -> false | Delimited<L, V, R>
+	local parse_block_node: () -> ast.Block
+	local parse_statement_node: () -> ast.Statement
+	local parse_last_statement: () -> ast.LastStatement?
+	local parse_simple_expression: () -> ast.SimpleExpression
 
-	local parse_function_body: () -> AstFunctionBody?
+	local parse_expression: () -> ast.Expression
+	local parse_expression_command: () -> ast.Expression | ast.ExpressionCommand
+	local parse_delimiter: <L, V, R>(L, R, fn: () -> V) -> false | ast.Delimited<L, V, R>
 
-	local parse_if_node: () -> AstIf
-	local parse_while_node: () -> AstWhile
-	local parse_for_node: () -> AstFor
-	local parse_command: () -> AstCommand
+	local parse_function_body: () -> ast.FunctionBody?
 
-	local parse_table: () -> AstExpressionTable
-	local parse_lambda: () -> AstExpressionLambdaNode
-	local parse_var: () -> AstVarNode
-	local parse_vector: () -> AstExpressionVectorNode
+	local parse_if_node: () -> ast.If
+	local parse_while_node: () -> ast.While
+	local parse_for_node: () -> ast.For
+	local parse_assign: () -> ast.Assign
+	local parse_command: () -> ast.Command
 
-	local function separated<T>(fn: () -> T): Separated<T>
+	local parse_table: () -> ast.ExpressionTable
+	local parse_lambda: () -> ast.ExpressionLambda
+	local parse_var: () -> ast.Var
+	local parse_vector: () -> ast.ExpressionVector
+
+	local function separated<T>(
+		fn: () -> T,
+		delimiter: ast.TokenKindRest?
+	): ast.Separated<T>
 		local values = {}
 
-		while not is_delimiter() do
+		while
+			not is_delimiter() and not (delimiter and current_is(delimiter))
+		do
 			skip_current()
 
 			local start = current_pos
@@ -870,17 +552,27 @@ local function parse(input: buffer)
 		return values
 	end
 
-	function parse_block_node(): AstBlock
+	function parse_block_node(): ast.Block
 		local start = current_pos
 		local body = {}
 
-		while not current_is "eof" do
-			if current_is "if" then
+		while not current_is "eof" and not is_delimiter() do
+			skip_current()
+
+			if current_kind == "if" then
 				table.insert(body, parse_if_node())
-			elseif current_is "while" then
+			elseif current_kind == "while" then
 				table.insert(body, parse_while_node())
-			elseif current_is "for" then
+			elseif current_kind == "for" then
 				table.insert(body, parse_for_node())
+			elseif lookahead_kind == "=" then
+				table.insert(body, parse_assign())
+			elseif
+				current_kind == "break"
+				or current_kind == "return"
+				or current_kind == "continue"
+			then
+				break
 			else
 				table.insert(body, parse_command())
 			end
@@ -893,19 +585,21 @@ local function parse(input: buffer)
 		}
 	end
 
-	function parse_statement_node(): AstStatement
+	function parse_statement_node(): ast.Statement
 		if current_is "if" then
 			return parse_if_node()
 		elseif current_is "while" then
 			return parse_while_node()
 		elseif current_is "for" then
 			return parse_for_node()
+		elseif current_is "identifier" and lookahead_is "=" then
+			return parse_assign()
 		else
 			return parse_command()
 		end
 	end
 
-	function parse_last_statement(): AstLastStatement?
+	function parse_last_statement(): ast.LastStatement?
 		if current_is "continue" then
 			local token = expect_fatal "continue"
 			return {
@@ -924,22 +618,24 @@ local function parse(input: buffer)
 			local token = expect_fatal "return"
 			local values = separated(parse_expression_command)
 
-			return {
+			local node: ast.Return = {
 				kind = "return" :: "return",
 				token = token,
 				values = values,
 				span = token.span,
 			}
+
+			return node
 		else
 			return nil
 		end
 	end
 
 	function parse_delimiter<L, R, V>(
-		left: L & TokenKind,
-		right: R & TokenKind,
+		left: L & ast.TokenKind,
+		right: R & ast.TokenKind,
 		fn: () -> V
-	): false | Delimited<L, V, R>
+	): false | ast.Delimited<L, V, R>
 		local token_left = expect(left)
 		local value = fn()
 		local token_right = expect(right)
@@ -953,9 +649,9 @@ local function parse(input: buffer)
 		}
 	end
 
-	function parse_function_body(): AstFunctionBody
+	function parse_function_body(): ast.FunctionBody
 		local arguments = parse_delimiter("|", "|", function()
-			return separated(function() return expect "identifier" end)
+			return separated(function() return expect "identifier" end, "|")
 		end)
 
 		local body = parse_delimiter("{", "}", parse_block_node)
@@ -964,7 +660,7 @@ local function parse(input: buffer)
 
 		return {
 			arguments = arguments,
-			bdoy = body,
+			block = body or nil,
 			span = to_span(
 				arguments and arguments.left.span,
 				arguments and arguments.right and arguments.right.span,
@@ -975,7 +671,7 @@ local function parse(input: buffer)
 	end
 
 	do
-		local function parse_if_branch(): AstIfBranch
+		local function parse_if_branch(): ast.IfBranch
 			local condition =
 				parse_delimiter("(", ")", parse_expression_command)
 			local block = parse_delimiter("{", "}", parse_block_node)
@@ -996,7 +692,7 @@ local function parse(input: buffer)
 			}
 		end
 
-		local function parse_elseif_branch(): AstIfElseBranch
+		local function parse_elseif_branch(): ast.ElseIfBranch
 			local token = expect_fatal "elseif"
 			local branch = parse_if_branch()
 
@@ -1007,11 +703,11 @@ local function parse(input: buffer)
 			}
 		end
 
-		function parse_if_node(): AstIf
+		function parse_if_node(): ast.If
 			local if_token = expect_fatal "if"
 
 			local first_branch = parse_if_branch()
-			local branches: { AstIfElseBranch } = {}
+			local branches: { ast.ElseIfBranch } = {}
 
 			while current_is "elseif" do
 				table.insert(branches, parse_elseif_branch())
@@ -1054,7 +750,7 @@ local function parse(input: buffer)
 		end
 	end
 
-	function parse_while_node(): AstWhile
+	function parse_while_node(): ast.While
 		local token = expect_fatal "while"
 		local condition = parse_delimiter("(", ")", parse_expression_command)
 		local block = parse_delimiter("{", "}", parse_block_node)
@@ -1076,10 +772,28 @@ local function parse(input: buffer)
 		}
 	end
 
-	function parse_for_node(): AstFor
+	function parse_assign(): ast.Assign
+		local name = expect_fatal "identifier"
+		local equals = expect_fatal "="
+		local expression = parse_expression_command()
+
+		return {
+			kind = "assign",
+			identifier = name,
+			equals = equals,
+			value = expression or nil,
+			span = to_span(
+				name and name.span,
+				equals and equals.span,
+				expression and expression.span
+			),
+		}
+	end
+
+	function parse_for_node(): ast.For
 		local token = expect_fatal "for"
 		local condition = parse_delimiter("(", ")", parse_expression_command)
-		local callback = parse_function_body()
+		local callback = parse_expression_command()
 
 		return {
 			kind = "for",
@@ -1096,12 +810,33 @@ local function parse(input: buffer)
 		}
 	end
 
-	function parse_command(): AstCommand
+	function parse_command(): ast.Command
 		local var = parse_var()
-		local arguments: { AstExpression } = {}
+		local arguments: { ast.SimpleExpression } = {}
 
-		while not is_delimiter() and not current_is "," do
-			table.insert(arguments, parse_expression(false))
+		while
+			current_kind ~= "\n"
+			and not current_is "if"
+			and not current_is "else"
+			and not current_is "elseif"
+			and not current_is "while"
+			and not current_is "for"
+			and not current_is "return"
+			and not current_is "break"
+			and not current_is "continue"
+			and not is_delimiter()
+			and not current_is ","
+		do
+			if current_is "identifier" and lookahead_kind ~= "." then
+				local token = expect_fatal "identifier"
+				table.insert(arguments, {
+					kind = "string",
+					token = token,
+					span = token.span,
+				})
+			else
+				table.insert(arguments, parse_simple_expression())
+			end
 		end
 
 		return {
@@ -1116,8 +851,8 @@ local function parse(input: buffer)
 	end
 
 	do
-		local function parse_tablefield_nokey(): AstTableFieldNoKey
-			local expression = parse_expression(true)
+		local function parse_tablefield_nokey(): ast.TableFieldNoKey
+			local expression = parse_expression_command()
 			return {
 				kind = "nokey",
 				value = expression,
@@ -1125,10 +860,10 @@ local function parse(input: buffer)
 			}
 		end
 
-		local function parse_tablefield_namekey(): AstTableFieldNameKey
+		local function parse_tablefield_namekey(): ast.TableFieldNameKey
 			local name = expect_fatal "identifier"
 			local equals = expect_fatal "="
-			local value = parse_expression(true)
+			local value = parse_expression_command()
 
 			return {
 				kind = "name_key",
@@ -1139,28 +874,91 @@ local function parse(input: buffer)
 			}
 		end
 
-		local function parse_tablefield_expressionkey(): AstTableFieldExpressionKey
-			local key = parse_delimiter("[", "]", parse_expression_command)
-			local equals = expect "="
-			local value = parse_expression(true)
+		local function parse_tablefield_expressionkey(): ast.TableFieldExpressionKey | ast.TableFieldNoKey
+			local left = expect_fatal "["
+			local value = parse_expression_command()
 
-			return {
-				kind = "expression_key",
-				key = key or nil,
-				equals = equals or nil,
-				value = value,
+			if current_is "]" and lookahead_is "=" then
+				local right = expect_fatal "]"
+				local key = {
+					left = left,
+					value = value,
+					right = right,
+				}
 
-				span = to_span(
-					key and key.left and key.left.span or nil,
-					key and key.value and key.value.span or nil,
-					key and key.right and key.right.span or nil,
-					equals and equals.span or nil,
-					value and value.span
-				),
-			}
+				local equals = expect "="
+				local value = parse_expression_command()
+
+				return {
+					kind = "expression_key",
+					key = key or nil,
+					equals = equals or nil,
+					value = value,
+
+					span = to_span(
+						key and key.left and key.left.span or nil,
+						key and key.value and key.value.span or nil,
+						key and key.right and key.right.span or nil,
+						equals and equals.span or nil,
+						value and value.span
+					),
+				}
+			else -- nokey vector
+				local first_separator = expect_fatal ","
+				local values: ast.Separated<ast.Expression | ast.ExpressionCommand?> =
+					{
+						{
+							value = value,
+							separator = first_separator,
+							span = to_span(
+								value and value.span,
+								first_separator.span
+							),
+						},
+					}
+
+				while not is_delimiter() do
+					skip_current()
+
+					local start = current_pos
+					local expression = parse_expression_command()
+					if not current_is "," then break end
+					local separator = expect_fatal ","
+
+					table.insert(values, {
+						value = expression,
+						separator = separator,
+						span = vector.create(start, separator.span.y),
+					})
+				end
+
+				local right = expect "]"
+				local expression: ast.ExpressionVector = {
+					kind = "vector",
+					contents = {
+						left = left,
+						right = right or nil,
+						value = values,
+					},
+					span = to_span(
+						left.span,
+						value and value.span or nil,
+						values[#values] and values[#values].span or nil,
+						right and right.span or nil
+					),
+				}
+
+				local node: ast.TableFieldNoKey = {
+					kind = "nokey",
+					value = expression,
+					span = expression.span,
+				}
+
+				return node
+			end
 		end
 
-		local function parse_tablefield(): AstTableField
+		local function parse_tablefield(): ast.TableField
 			if current_is "identifier" and lookahead_is "=" then
 				return parse_tablefield_namekey()
 			elseif current_is "[" then
@@ -1170,7 +968,7 @@ local function parse(input: buffer)
 			end
 		end
 
-		function parse_table(): AstExpressionTable
+		function parse_table(): ast.ExpressionTable
 			local values = parse_delimiter(
 				"{",
 				"}",
@@ -1195,15 +993,15 @@ local function parse(input: buffer)
 	end
 
 	do
-		local function parse_unary_operator(): Token<UnaryOperator>?
-			if current_kind == "-" or current_kind == "not" then
+		local function parse_unary_operator(): ast.Token<ast.UnaryOperator>?
+			if current_kind == "-" or current_kind == "!" then
 				return consume() :: any
 			else
 				return nil
 			end
 		end
 
-		local function current_binary_operator(): Token<BinaryOperator>?
+		local function current_binary_operator(): ast.Token<ast.BinaryOperator>?
 			if
 				current_kind == "+"
 				or current_kind == "-"
@@ -1219,6 +1017,7 @@ local function parse(input: buffer)
 				or current_kind == ">="
 				or current_kind == "=="
 				or current_kind == "~="
+				or current_kind == "!="
 				or current_kind == "and"
 				or current_kind == "or"
 			then
@@ -1229,7 +1028,9 @@ local function parse(input: buffer)
 		end
 
 		local function binary_operator_priority(
-			op: Token<BinaryOperator>
+			op: ast.Token<
+				ast.BinaryOperator
+			>
 		): (number, number)
 			local kind = op.kind
 
@@ -1246,7 +1047,7 @@ local function parse(input: buffer)
 				return 10, 9
 			elseif kind == ".." then
 				return 5, 4
-			elseif kind == "==" or kind == "~=" then
+			elseif kind == "==" or kind == "~=" or kind == "!=" then
 				return 3, 3
 			elseif
 				kind == "<"
@@ -1264,10 +1065,19 @@ local function parse(input: buffer)
 			end
 		end
 
-		local function parse_simple_expression(
-			allow_call: boolean
-		): AstExpression?
-			if current_is "(" then
+		function parse_simple_expression(): ast.Expression?
+			local unary = parse_unary_operator()
+
+			if unary then
+				local righthandside = parse_expression(8)
+
+				return {
+					kind = "unary",
+					operator = unary,
+					value = righthandside,
+					span = to_span(unary.span, righthandside.span),
+				}
+			elseif current_is "(" then
 				local expression =
 					parse_delimiter("(", ")", parse_expression_command)
 
@@ -1284,44 +1094,51 @@ local function parse(input: buffer)
 				}
 			elseif current_is "nil" then
 				local token = expect_fatal "nil"
-				local node: AstExpressionNilNode =
+				local node: ast.ExpressionNil =
 					{ kind = "nil", token = token, span = token.span }
 				return node
 			elseif current_is "false" or current_is "true" then
-				local token: Token<"false"> | Token<"true"> = consume() :: any
-				local node: AstExpressionBooleanNode =
+				local token: ast.Token<"false"> | ast.Token<"true"> =
+					consume() :: any
+				local node: ast.ExpressionBoolean =
 					{ kind = "boolean", token = token, span = token.span }
 				return node
 			elseif current_is "number" then
 				local token = expect_fatal "number"
-				local node: AstExpressionNumberNode =
+				local node: ast.ExpressionNumber =
 					{ kind = "number", token = token, span = token.span }
 				return node
 			elseif current_is "string" then
 				local token = expect_fatal "string"
-				local node: AstExpressionStringNode =
+				local node: ast.ExpressionString =
 					{ kind = "string", token = token, span = token.span }
 				return node
 			elseif current_is "{" then
 				return parse_table()
 			elseif current_is "|" then
 				return parse_lambda()
-			elseif current_is "$" then
+			elseif current_is "$" or current_is "identifier" then
 				return parse_var()
 			elseif current_is "[" then
 				return parse_vector()
 			elseif current_is "&" then
 				local token = expect_fatal "&"
-				if not allow_call then
-					throw(
-						"you are not allowed to run a command within this context. please delimit with () before calling a command",
-						token.span
-					)
-					return expected_but(`expression`)
-				end
+				throw(
+					"you are not allowed to run a command within this context. please delimit with () before calling a command",
+					token.span
+				)
+				return expected_but(`expression`)
+			else
+				return expected_but(`expression`)
+			end
+		end
+
+		local function parse_simple_expression_command(): ast.Expression? | ast.ExpressionCommand
+			if current_is "&" then
+				local token = expect_fatal "&"
 
 				local command = parse_command()
-				local node: AstExpressionCommand = {
+				local node: ast.ExpressionCommand = {
 					kind = "command" :: "command",
 					prefix = token,
 					command = command,
@@ -1330,24 +1147,19 @@ local function parse(input: buffer)
 
 				return node
 			else
-				return expected_but(`expression`)
+				return parse_simple_expression()
 			end
 		end
 
-		function parse_expression_command() return parse_expression(true) end
-
-		function parse_expression(
-			allow_call: boolean,
-			limit: number?
-		): AstExpression
+		function parse_expression(limit: number?): ast.Expression
 			limit = limit or 0
 
-			local expr: AstExpression?
+			local expr: ast.Expression?
 
 			local unary_operator = parse_unary_operator()
 
 			if unary_operator then
-				local righthandside = parse_expression(false, 8)
+				local righthandside = parse_expression(8)
 
 				expr = {
 					kind = "unary",
@@ -1356,7 +1168,7 @@ local function parse(input: buffer)
 					span = to_span(unary_operator.span, righthandside.span),
 				}
 			else
-				expr = parse_simple_expression(allow_call or false)
+				expr = parse_simple_expression()
 			end
 
 			while true do
@@ -1371,7 +1183,7 @@ local function parse(input: buffer)
 
 				consume()
 
-				local rhs = parse_expression(false, right_priority)
+				local rhs = parse_expression(right_priority)
 				if not expr then return panic "no left hand side" end
 
 				expr = {
@@ -1389,9 +1201,17 @@ local function parse(input: buffer)
 			if not expr then return panic "no expression" end
 			return expr
 		end
+
+		function parse_expression_command(): ast.Expression? | ast.ExpressionCommand
+			if current_is "&" then
+				return parse_simple_expression_command()
+			else
+				return parse_expression()
+			end
+		end
 	end
 
-	function parse_lambda(): AstExpressionLambdaNode
+	function parse_lambda(): ast.ExpressionLambda
 		local lambda = parse_function_body()
 
 		return {
@@ -1401,7 +1221,7 @@ local function parse(input: buffer)
 		}
 	end
 
-	function parse_vector(): AstExpressionVectorNode
+	function parse_vector(): ast.ExpressionVector
 		local values = parse_delimiter(
 			"[",
 			"]",
@@ -1425,7 +1245,7 @@ local function parse(input: buffer)
 	end
 
 	do
-		local function parse_var_root(): AstVarRoot
+		local function parse_var_root(): ast.VarRoot
 			if current_is "identifier" then
 				local ident = expect_fatal "identifier"
 				return {
@@ -1462,13 +1282,32 @@ local function parse(input: buffer)
 					span = to_span(operator.span, name and name.span or nil),
 				}
 			else
-				throw("could not parse into var", current_token.span)
+				throw(
+					`could not parse into var. got {current_kind}`,
+					current_token.span
+				)
 				return panic()
 			end
 		end
 
-		local function parse_var_suffix(): AstVarSuffixNode
-			if current_is "." then
+		local function parse_var_suffix(): ast.VarSuffix
+			if current_is "." and lookahead_is "[" then
+				local operator = expect_fatal "."
+				local node = parse_delimiter("[", "]", parse_expression_command)
+				if not node then return panic "unreachable" end
+
+				return {
+					kind = "expression_index",
+					node = node,
+
+					period = operator,
+					span = to_span(
+						node.left and node.left.span or nil,
+						node.value and node.value.span or nil,
+						node.right and node.right.span or nil
+					),
+				}
+			elseif current_is "." then
 				local operator = expect_fatal "."
 				local name = expect "identifier"
 
@@ -1480,30 +1319,16 @@ local function parse(input: buffer)
 
 					span = to_span(operator.span, name and name.span or nil),
 				}
-			elseif current_is "[" then
-				local node = parse_delimiter("[", "]", parse_expression_command)
-				if not node then return panic "unreachable" end
-
-				return {
-					kind = "expression_index",
-					node = node,
-
-					span = to_span(
-						node.left and node.left.span or nil,
-						node.value and node.value.span or nil,
-						node.right and node.right.span or nil
-					),
-				}
 			else
 				return panic "unreachable"
 			end
 		end
 
-		function parse_var(): AstVarNode
+		function parse_var(): ast.Var
 			local root = parse_var_root()
-			local suffixes: { AstVarSuffixNode } = {}
+			local suffixes: { ast.VarSuffix } = {}
 
-			while current_is "." or current_is "[" do
+			while current_kind == "." do
 				table.insert(suffixes, parse_var_suffix())
 			end
 
@@ -1519,7 +1344,7 @@ local function parse(input: buffer)
 		end
 	end
 
-	local result = parse_block_node()
+	local result = { block = parse_block_node() }
 
 	if #issues > 0 then
 		error {
@@ -1533,3 +1358,5 @@ local function parse(input: buffer)
 		}
 	end
 end
+
+return parse
