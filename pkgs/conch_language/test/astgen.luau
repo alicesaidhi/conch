@@ -1,9 +1,9 @@
-local astp = require "../src/ast"
+local ast = require "../src/ast/ast"
 
 local span = vector.zero
-local ast = {}
+local astgen = {}
 
-local function token<T>(value: T | astp.TokenKind, text: string?): astp.Token
+local function token<T>(value: T | ast.TokenKind, text: string?): ast.Token
 	return {
 		kind = value,
 		text = text or value,
@@ -12,14 +12,14 @@ local function token<T>(value: T | astp.TokenKind, text: string?): astp.Token
 end
 
 local function delimit<L, R, V>(
-	left: L | astp.TokenKindRest,
-	right: R | astp.TokenKindRest,
+	left: L | ast.TokenKindRest,
+	right: R | ast.TokenKindRest,
 	value: V
-): astp.Delimited<L, V, R>
+): ast.Delimited<L, V, R>
 	return { left = token(left), right = token(right), value = value }
 end
 
-local function separate<T>(array: { T }): astp.Separated<T>
+local function separate<T>(array: { T }): ast.Separated<T>
 	local map = {}
 
 	for idx, value in array do
@@ -33,10 +33,10 @@ local function separate<T>(array: { T }): astp.Separated<T>
 	return map
 end
 
-function ast.if_branch(
-	condition: astp.Expression | astp.ExpressionCommand,
-	block: astp.Block
-): astp.IfBranch
+function astgen.if_branch(
+	condition: ast.Expression | ast.ExpressionCommand,
+	block: ast.Block
+): ast.IfBranch
 	return {
 		condition = delimit("(", ")", condition),
 		block = delimit("{", "}", block),
@@ -44,7 +44,7 @@ function ast.if_branch(
 	}
 end
 
-function ast.if_else_branch(branch: astp.IfBranch)
+function astgen.if_else_branch(branch: ast.IfBranch)
 	return {
 		ifelse = token "elseif",
 		branch = branch,
@@ -52,7 +52,7 @@ function ast.if_else_branch(branch: astp.IfBranch)
 	}
 end
 
-function ast.else_branch(block: astp.Block): astp.ElseBranch
+function astgen.else_branch(block: ast.Block): ast.ElseBranch
 	return {
 		token = token "else",
 		block = delimit("{", "}", block),
@@ -60,11 +60,11 @@ function ast.else_branch(block: astp.Block): astp.ElseBranch
 	}
 end
 
-function ast.stat_if(
-	if_branch: astp.IfBranch,
-	branches: { astp.ElseIfBranch }?,
-	else_branch: astp.ElseBranch?
-): astp.If
+function astgen.stat_if(
+	if_branch: ast.IfBranch,
+	branches: { ast.ElseIfBranch }?,
+	else_branch: ast.ElseBranch?
+): ast.If
 	return {
 		kind = "if",
 		token = token "if",
@@ -78,10 +78,10 @@ function ast.stat_if(
 	}
 end
 
-function ast.stat_while(
-	condition: astp.Expression | astp.ExpressionCommand,
-	block: astp.Block
-): astp.While
+function astgen.stat_while(
+	condition: ast.Expression | ast.ExpressionCommand,
+	block: ast.Block
+): ast.While
 	return {
 		kind = "while",
 		token = token "while",
@@ -91,10 +91,10 @@ function ast.stat_while(
 	}
 end
 
-function ast.stat_for(
-	expression: astp.Expression | astp.ExpressionCommand,
-	fn: astp.Expression | astp.ExpressionCommand
-): astp.For
+function astgen.stat_for(
+	expression: ast.Expression | ast.ExpressionCommand,
+	fn: ast.Expression | ast.ExpressionCommand
+): ast.For
 	return {
 		kind = "for",
 		token = token "for",
@@ -104,10 +104,10 @@ function ast.stat_for(
 	}
 end
 
-function ast.stat_command(
-	var: astp.Var,
-	arguments: { astp.SimpleExpression }
-): astp.Command
+function astgen.stat_command(
+	var: ast.Var,
+	arguments: { ast.SimpleExpression }
+): ast.Command
 	return {
 		kind = "command",
 		var = var,
@@ -116,10 +116,10 @@ function ast.stat_command(
 	}
 end
 
-function ast.stat_assign(
+function astgen.stat_assign(
 	ident: string,
-	value: astp.Expression | astp.ExpressionCommand
-): astp.Assign
+	value: ast.Expression | ast.ExpressionCommand
+): ast.Assign
 	return {
 		kind = "assign",
 		identifier = token("identifier", ident),
@@ -129,7 +129,7 @@ function ast.stat_assign(
 	}
 end
 
-function ast.lstat_continue(): astp.Continue
+function astgen.lstat_continue(): ast.Continue
 	return {
 		kind = "continue",
 		token = token "continue",
@@ -137,7 +137,7 @@ function ast.lstat_continue(): astp.Continue
 	}
 end
 
-function ast.lstat_break(): astp.Break
+function astgen.lstat_break(): ast.Break
 	return {
 		kind = "break",
 		token = token "break",
@@ -145,9 +145,9 @@ function ast.lstat_break(): astp.Break
 	}
 end
 
-function ast.lstat_return(
-	values: { astp.Expression | astp.ExpressionCommand? }
-): astp.Return
+function astgen.lstat_return(
+	values: { ast.Expression | ast.ExpressionCommand? }
+): ast.Return
 	return {
 		kind = "return",
 		token = token "return",
@@ -156,10 +156,10 @@ function ast.lstat_return(
 	}
 end
 
-function ast.block(
-	statements: { astp.Statement },
-	last: astp.LastStatement?
-): astp.Block
+function astgen.block(
+	statements: { ast.Statement },
+	last: ast.LastStatement?
+): ast.Block
 	return {
 		body = statements,
 		last_statement = last,
@@ -167,7 +167,7 @@ function ast.block(
 	}
 end
 
-function ast.expr_table(values: { astp.TableField }): astp.ExpressionTable
+function astgen.expr_table(values: { ast.TableField }): ast.ExpressionTable
 	return {
 		kind = "table",
 		values = delimit("{", "}", separate(values)),
@@ -175,9 +175,9 @@ function ast.expr_table(values: { astp.TableField }): astp.ExpressionTable
 	}
 end
 
-function ast.tablefield_nokey(
-	value: astp.Expression | astp.ExpressionCommand
-): astp.TableFieldNoKey
+function astgen.tablefield_nokey(
+	value: ast.Expression | ast.ExpressionCommand
+): ast.TableFieldNoKey
 	return {
 		kind = "nokey",
 		value = value,
@@ -185,10 +185,10 @@ function ast.tablefield_nokey(
 	}
 end
 
-function ast.tablefield_expressionkey(
-	key: astp.Expression | astp.ExpressionCommand,
-	value: astp.Expression | astp.ExpressionCommand
-): astp.TableFieldExpressionKey
+function astgen.tablefield_expressionkey(
+	key: ast.Expression | ast.ExpressionCommand,
+	value: ast.Expression | ast.ExpressionCommand
+): ast.TableFieldExpressionKey
 	return {
 		kind = "expression_key",
 
@@ -200,10 +200,10 @@ function ast.tablefield_expressionkey(
 	}
 end
 
-function ast.tablefield_namekey(
+function astgen.tablefield_namekey(
 	key: string,
-	value: astp.Expression | astp.ExpressionCommand
-): astp.TableFieldNameKey
+	value: ast.Expression | ast.ExpressionCommand
+): ast.TableFieldNameKey
 	return {
 		kind = "name_key",
 		name = token("identifier", key),
@@ -213,7 +213,7 @@ function ast.tablefield_namekey(
 	}
 end
 
-function ast.var(root: astp.VarRoot, suffixes: { astp.VarSuffix }): astp.Var
+function astgen.var(root: ast.VarRoot, suffixes: { ast.VarSuffix }): ast.Var
 	return {
 		kind = "var",
 		root = root,
@@ -222,9 +222,9 @@ function ast.var(root: astp.VarRoot, suffixes: { astp.VarSuffix }): astp.Var
 	}
 end
 
-function ast.varsuffix_expression_index(
-	expression: astp.Expression | astp.ExpressionCommand
-): astp.VarSuffixExpressionIndex
+function astgen.varsuffix_expression_index(
+	expression: ast.Expression | ast.ExpressionCommand
+): ast.VarSuffixExpressionIndex
 	return {
 		kind = "expression_index",
 		span = span,
@@ -233,7 +233,7 @@ function ast.varsuffix_expression_index(
 	}
 end
 
-function ast.varsuffix_name_index(name: string): astp.VarSuffixNameIndex
+function astgen.varsuffix_name_index(name: string): ast.VarSuffixNameIndex
 	return {
 		kind = "name_index",
 		span = span,
@@ -242,9 +242,9 @@ function ast.varsuffix_name_index(name: string): astp.VarSuffixNameIndex
 	}
 end
 
-function ast.varroot_paren(
-	expression: astp.Expression | astp.ExpressionCommand
-): astp.VarRootParen
+function astgen.varroot_paren(
+	expression: ast.Expression | ast.ExpressionCommand
+): ast.VarRootParen
 	return {
 		kind = "paren",
 		span = span,
@@ -253,7 +253,7 @@ function ast.varroot_paren(
 	}
 end
 
-function ast.varroot_var(name: string): astp.VarRootVariable
+function astgen.varroot_var(name: string): ast.VarRootVariable
 	return {
 		kind = "name",
 		var = token "$",
@@ -262,7 +262,7 @@ function ast.varroot_var(name: string): astp.VarRootVariable
 	}
 end
 
-function ast.varroot_global(name: string): astp.VarRootGlobal
+function astgen.varroot_global(name: string): ast.VarRootGlobal
 	return {
 		kind = "global",
 		token = token("identifier", name),
@@ -270,7 +270,7 @@ function ast.varroot_global(name: string): astp.VarRootGlobal
 	}
 end
 
-function ast.expr_command(command: astp.Command): astp.ExpressionCommand
+function astgen.expr_command(command: ast.Command): ast.ExpressionCommand
 	return {
 		kind = "command",
 		prefix = token "&",
@@ -279,9 +279,9 @@ function ast.expr_command(command: astp.Command): astp.ExpressionCommand
 	}
 end
 
-function ast.expr_evaluate(
-	expression: astp.Expression | astp.ExpressionCommand
-): astp.ExpressionEvaluate
+function astgen.expr_evaluate(
+	expression: ast.Expression | ast.ExpressionCommand
+): ast.ExpressionEvaluate
 	return {
 		kind = "evaluate",
 		command = delimit("(", ")", expression),
@@ -289,10 +289,10 @@ function ast.expr_evaluate(
 	}
 end
 
-function ast.expr_unary(
-	operator: astp.UnaryOperator,
-	expression: astp.Expression
-): astp.ExpressionUnary
+function astgen.expr_unary(
+	operator: ast.UnaryOperator,
+	expression: ast.Expression
+): ast.ExpressionUnary
 	return {
 		kind = "unary",
 		operator = token(operator),
@@ -301,11 +301,11 @@ function ast.expr_unary(
 	}
 end
 
-function ast.expr_vector(
-	x: astp.Expression | astp.ExpressionCommand?,
-	y: astp.Expression | astp.ExpressionCommand?,
-	z: astp.Expression | astp.ExpressionCommand?
-): astp.ExpressionVector
+function astgen.expr_vector(
+	x: ast.Expression | ast.ExpressionCommand?,
+	y: ast.Expression | ast.ExpressionCommand?,
+	z: ast.Expression | ast.ExpressionCommand?
+): ast.ExpressionVector
 	return {
 		kind = "vector",
 		contents = delimit("[", "]", separate { x, y, z }),
@@ -313,11 +313,11 @@ function ast.expr_vector(
 	}
 end
 
-function ast.function_body(
+function astgen.function_body(
 	arguments: { string },
-	block: astp.Block
-): astp.FunctionBody
-	local args_identifiers: { astp.Token<"identifier"> | false } = {}
+	block: ast.Block
+): ast.FunctionBody
+	local args_identifiers: { ast.Token<"identifier"> | false } = {}
 
 	for idx, arg in arguments do
 		args_identifiers[idx] = token("identifier", arg)
@@ -330,7 +330,7 @@ function ast.function_body(
 	}
 end
 
-function ast.expr_lambda(body: astp.FunctionBody): astp.ExpressionLambda
+function astgen.expr_lambda(body: ast.FunctionBody): ast.ExpressionLambda
 	return {
 		kind = "lambda",
 		body = body,
@@ -338,7 +338,7 @@ function ast.expr_lambda(body: astp.FunctionBody): astp.ExpressionLambda
 	}
 end
 
-function ast.expr_string(input: string): astp.ExpressionString
+function astgen.expr_string(input: string): ast.ExpressionString
 	return {
 		kind = "string",
 		token = token("string", string.format("%q", input)),
@@ -346,7 +346,7 @@ function ast.expr_string(input: string): astp.ExpressionString
 	}
 end
 
-function ast.arg_ident(input: string): astp.ExpressionString
+function astgen.arg_ident(input: string): ast.ExpressionString
 	return {
 		kind = "string",
 		token = token("identifier", input),
@@ -354,11 +354,11 @@ function ast.arg_ident(input: string): astp.ExpressionString
 	}
 end
 
-function ast.expr_binary(
-	left: astp.Expression,
-	operator: astp.BinaryOperator,
-	right: astp.Expression
-): astp.ExpressionBinary
+function astgen.expr_binary(
+	left: ast.Expression,
+	operator: ast.BinaryOperator,
+	right: ast.Expression
+): ast.ExpressionBinary
 	return {
 		kind = "binary",
 		left = left,
@@ -368,7 +368,7 @@ function ast.expr_binary(
 	}
 end
 
-function ast.expr_number(n: number): astp.ExpressionNumber
+function astgen.expr_number(n: number): ast.ExpressionNumber
 	return {
 		kind = "number",
 		token = token("number", tostring(n)),
@@ -376,7 +376,7 @@ function ast.expr_number(n: number): astp.ExpressionNumber
 	}
 end
 
-function ast.expr_boolean(bool: boolean): astp.ExpressionBoolean
+function astgen.expr_boolean(bool: boolean): ast.ExpressionBoolean
 	local bool: "true" | "false" = tostring(bool) :: any
 	return {
 		kind = "boolean",
@@ -385,7 +385,7 @@ function ast.expr_boolean(bool: boolean): astp.ExpressionBoolean
 	}
 end
 
-function ast.expr_nil(): astp.ExpressionNil
+function astgen.expr_nil(): ast.ExpressionNil
 	return {
 		kind = "nil",
 		token = token "nil",
@@ -393,10 +393,10 @@ function ast.expr_nil(): astp.ExpressionNil
 	}
 end
 
-function ast.to_ast(block: astp.Block): astp.Ast
+function astgen.to_ast(block: ast.Block): ast.Ast
 	return {
 		block = block,
 	}
 end
 
-return ast
+return astgen

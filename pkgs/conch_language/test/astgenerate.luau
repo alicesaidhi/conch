@@ -1,4 +1,4 @@
-local ast = require "./ast"
+local ast = require "./astgen"
 local astt = require "../src/ast"
 
 local LAST_STATEMENT_CHANCE = 0.5

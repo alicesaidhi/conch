@@ -1,10 +1,10 @@
-name = "alicesaidhi/conch_ast"
-version = "0.2.1-rc.2"
+name = "alicesaidhi/conch_language"
+version = "0.3.0"
 includes = ["src/**", "pesde.toml"]
 
 [target]
 environment = "roblox"
-lib = "src/lib.luau"
+lib = "src/init.luau"
 build_files = ["src"]
 
 [indices]
