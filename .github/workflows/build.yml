@@ -25,6 +25,6 @@ jobs:
 
       - name: Build rbxm and release
         run: |
-          cd pkgs/standalone
+          cd pkgs/conch_standalone
           rojo build default.project.json -o standalone.rbxm
           gh release upload ${{github.event.release.tag_name}} standalone.rbxm
