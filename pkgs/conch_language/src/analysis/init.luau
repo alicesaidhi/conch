@@ -286,6 +286,7 @@ function autocomplete.visit_command(state, node)
 		for i = #acceptable_overloads, 1, -1 do
 			local overload = acceptable_overloads[i]
 			local arg_b = overload.arguments[idx]
+			if not arg_b then continue end
 			if arg_b.kind ~= "literal" then continue end
 			if not arg_b then table.remove(acceptable_overloads, i) end
 			-- determine if overload matches
