@@ -8,7 +8,7 @@
 **/dist
 **/default.project.json
 pkgs/_foreign_*
-!pkgs/standalone/default.project.json
+!pkgs/conch_standalone/default.project.json
 
 /out
 /local
