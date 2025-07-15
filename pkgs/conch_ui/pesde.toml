@@ -15,5 +15,5 @@ default = "https://github.com/UpliftGames/wally-index"
 
 [dependencies]
 vide = { wally = "wally#centau/vide", version = "^0.3.1" }
-ast = { workspace = "alicesaidhi/conch_ast", version = "^", target = "roblox" }
+language = { workspace = "alicesaidhi/conch_language", version = "^", target = "roblox" }
 conch = { workspace = "alicesaidhi/conch", version = "^" }

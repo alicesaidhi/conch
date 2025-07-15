@@ -6,8 +6,8 @@ local read = vide.read :: (<T>(() -> T) -> T) & (<T>(T) -> T)
 
 type Can<T> = T | () -> T
 type Background = {
-	read width: Can<number>?,
-	read height: Can<number>?,
+	read w: Can<number>?,
+	read h: Can<number>?,
 	read order: Can<number>?,
 
 	read text: Can<string>,
@@ -23,15 +23,13 @@ type Background = {
 return function(props: Background)
 	return create "TextLabel" {
 		Size = function()
-			return UDim2.fromOffset(
-				read(props.width) or 0,
-				read(props.height) or 0
-			)
+			return UDim2.fromOffset(read(props.w) or 0, read(props.h) or 0)
 		end,
-		AutomaticSize = if props.width and props.height
+		AutomaticSize = if props.w and props.h
 			then nil
-			elseif props.width then Enum.AutomaticSize.Y
+			elseif props.w then Enum.AutomaticSize.Y
 			else Enum.AutomaticSize.X,
+		LayoutOrder = props.order,
 
 		Text = props.text,
 		TextSize = props.text_size,

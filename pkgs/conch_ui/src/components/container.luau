@@ -5,8 +5,8 @@ local read = vide.read
 
 type Can<T> = T | () -> T
 type Container = {
-	read width: Can<number>?,
-	read height: Can<number>?,
+	read w: Can<number>?,
+	read h: Can<number>?,
 	read x: Can<number>?,
 	read y: Can<number>?,
 	read xs: Can<number>?,
@@ -22,10 +22,7 @@ type Container = {
 return function(props: Container)
 	return create "Frame" {
 		Size = function()
-			return UDim2.fromOffset(
-				read(props.width) or 0,
-				read(props.height) or 0
-			)
+			return UDim2.fromOffset(read(props.w) or 0, read(props.h) or 0)
 		end,
 		Position = function()
 			return UDim2.new(

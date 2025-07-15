@@ -635,5 +635,12 @@ if ($var == 1) {
 end)
 
 --todo: write tests for analysis but im lazy
+testkit.print(
+	analysis(
+		language.create_vm(),
+		"var = true; while (true) { print $var }",
+		35
+	)
+)
 
 t.FINISH()

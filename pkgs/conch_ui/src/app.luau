@@ -1,3 +1,4 @@
+--!nonstrict
 local TextService = game:GetService "TextService"
 local UserInputService = game:GetService "UserInputService"
 
@@ -6,6 +7,7 @@ local conch = require "../roblox_packages/conch"
 local corner = require "./components/corner"
 local flex = require "./components/flex"
 local gap = require "./components/gap"
+local levenshtein_distance = require "./levenshtein_distance"
 local loading = require "./components/loading"
 local padding = require "./components/padding"
 local screen = require "./components/screen"
@@ -24,9 +26,7 @@ local effect = vide.effect
 local cleanup = vide.cleanup
 local indexes = vide.indexes
 
-local STARTUP_TEXT = [[
-Conch 0.2.x
-Copyright (c) alicesays_hallo - This project is licensed under MIT, you can view the included license with `license`]]
+local STARTUP_TEXT = "Conch 0.3.0\n"
 
 local history_n = 0
 local history = {}
@@ -48,6 +48,7 @@ return function()
 	for _, s in string.split(STARTUP_TEXT, "\n") do
 		output { kind = "normal", text = s }
 	end
+
 	output {
 		kind = "warn",
 		text = "If you got here accidentally, run the `close-ui` command to close this UI.",
@@ -74,23 +75,6 @@ return function()
 	local working = source(false)
 	local cursor_position = source(0)
 	local absolute_position = source(Vector2.zero)
-	local pending = source()
-
-	local input = derive(function()
-		debug.profilebegin "this"
-		if pending() then
-			debug.profileend()
-			return pending().src .. raw_text()
-		else
-			debug.profileend()
-			return raw_text()
-		end
-	end)
-
-	local syntax_error = derive(function()
-		local status = conch.parse(input())
-		return if status.status == "error" then status.why else nil
-	end)
 
 	local analysis = source(conch.analyze("", 0))
 	local selected_suggestion = source(1)
@@ -113,6 +97,7 @@ return function()
 		cursor_position()
 		if deferred then return end
 		deferred = true
+
 		task.defer(function()
 			deferred = false
 			analysis(conch.analyze(raw_text(), cursor_position() - 1))
@@ -150,8 +135,10 @@ return function()
 	end
 
 	cleanup(UserInputService.InputBegan:Connect(function(input)
+		local analysis_result = analysis()
+
 		if input.KeyCode == Enum.KeyCode.Down then
-			if #analysis().suggestions == 0 then
+			if #analysis_result.suggestions == 0 then
 				if history_n == 0 then history[history_n] = raw_text() end
 
 				history_n = math.clamp(history_n - 1, 0, #history)
@@ -159,11 +146,14 @@ return function()
 				cursor_position(#raw_text() + 1)
 			else
 				selected_suggestion(
-					math.min(selected_suggestion() + 1, #analysis().suggestions)
+					math.min(
+						selected_suggestion() + 1,
+						#analysis_result.suggestions
+					)
 				)
 			end
 		elseif input.KeyCode == Enum.KeyCode.Up then
-			if #analysis().suggestions == 0 then
+			if #analysis_result.suggestions == 0 then
 				if history_n == 0 then history[history_n] = raw_text() end
 
 				history_n = math.clamp(history_n + 1, 0, #history)
@@ -175,7 +165,53 @@ return function()
 		end
 	end))
 
-	local next_cursor_position = false
+	local filtered_suggestions = derive(function()
+		local analysis_result = analysis()
+		local suggestions = analysis_result and analysis_result.suggestions
+		if not suggestions then return {} end
+
+		local filtered_suggestions = {}
+		local input = string.sub(
+			raw_text(),
+			analysis_result.replace.x + 1,
+			cursor_position() - 1
+		)
+
+		for _, suggestion in suggestions do
+			if
+				not string.find(
+					suggestion.display,
+					string.gsub(input, "^%s", ""),
+					0,
+					true
+				)
+			then
+				continue
+			end
+
+			local score = levenshtein_distance(input, suggestion.display)
+			if score == -math.huge then continue end
+			table.insert(
+				filtered_suggestions,
+				{ suggestion = suggestion, score = score }
+			)
+		end
+
+		table.sort(
+			filtered_suggestions,
+			function(a, b) return a.score < b.score end
+		)
+
+		local new_suggestions = {}
+
+		for idx, suggestion in filtered_suggestions do
+			table.insert(new_suggestions, suggestion.suggestion)
+		end
+
+		return new_suggestions
+	end)
+
+	local next_cursor_position: false | number = false
 	return screen {
 		name = "Command Executor",
 		display_order = 100_000,
@@ -198,8 +234,10 @@ return function()
 					end,
 					selected = selected_suggestion,
 
-					analyzing = function() return analysis().analyzing end,
-					suggestions = function() return analysis().suggestions end,
+					analysis = analysis,
+					suggestions = filtered_suggestions,
+
+					result = analysis,
 				},
 			}
 		end),
@@ -211,30 +249,28 @@ return function()
 			corner(4),
 			padding { y = 4 },
 
-			indexes(function()
-				local err = syntax_error()
-				local result = table.clone(analysis() and analysis().logs or {})
-				if err then
-					table.insert(result, { kind = "error", text = err })
+			indexes(
+				function() return analysis().issues end,
+				function(log, layout)
+					return text {
+						order = 0 - layout + 100,
+						h = 20,
+
+						text = function()
+							return `{log().why} at {log().span.x}:{log().span.y}:{log().span.z}`
+						end,
+						text_size = 16,
+						text_style = "error",
+						xalignment = Enum.TextXAlignment.Left,
+
+						padding { x = 8 },
+					}
 				end
-				return result
-			end, function(log, layout)
-				return text {
-					order = 0 - layout + 100,
-					height = 20,
-
-					text = function() return log().text end,
-					text_size = 16,
-					text_style = function() return log().kind end,
-					xalignment = Enum.TextXAlignment.Left,
-
-					padding { x = 8 },
-				}
-			end),
+			),
 
 			indexes(state.logs, function(log: () -> conch.Log, layout: number)
 				return text {
-					height = 20,
+					h = 20,
 					order = -layout - 1,
 
 					text = function() return log().text end,
@@ -247,7 +283,7 @@ return function()
 			end),
 		},
 
-		gap { height = 4 },
+		gap { h = 4 },
 
 		background {
 			auto = Enum.AutomaticSize.Y,
@@ -257,7 +293,7 @@ return function()
 				working,
 				function()
 					return loading {
-						height = 18,
+						h = 18,
 						speed = 6,
 						text_size = 18,
 						xalignment = Enum.TextXAlignment.Left,
@@ -271,13 +307,13 @@ return function()
 								or cursor_position()
 							local at =
 								string.sub(text, position - 1, position - 1)
-							local suggestion = analysis().suggestions
+							local suggestions = filtered_suggestions()
 
-							if at == "\t" and suggestion[1] then
+							if at == "\t" and suggestions[1] then
 								text = autofill(
 									raw_text(),
-									suggestion[selected_suggestion()].replace,
-									suggestion[selected_suggestion()].with
+									analysis().replace,
+									suggestions[selected_suggestion()].text
 								)
 							end
 
@@ -286,18 +322,7 @@ return function()
 						placeholder = "Enter your command",
 						text_size = 18,
 						xalignment = Enum.TextXAlignment.Left,
-						multiline = function()
-							if pending() then
-								local status = conch.parse(
-									pending().src .. raw_text(),
-									"yield"
-								)
-								return status.status == "pending"
-							else
-								local status = conch.parse(raw_text(), "yield")
-								return status.status == "pending"
-							end
-						end,
+						-- multiline = function() return #analysis().issues > 0 end,
 
 						enter = function(value)
 							history_n = 0
@@ -305,18 +330,9 @@ return function()
 							raw_text ""
 							state.focused(true)
 
-							if pending() then
-								pending(pending().append(value))
-							else
-								pending(conch.parse(value, true))
-							end
-
-							if pending().status ~= "pending" then
-								working(true)
-								pending(nil)
-								conch.execute(value)
-								working(false)
-							end
+							working(true)
+							conch.execute(value)
+							working(false)
 						end,
 
 						focused = state.focused,

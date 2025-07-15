@@ -9,8 +9,8 @@ local read = vide.read :: (<T>(() -> T) -> T) & (<T>(T) -> T)
 
 type Can<T> = T | () -> T
 type Background = {
-	read width: Can<number>?,
-	read height: Can<number>?,
+	read w: Can<number>?,
+	read h: Can<number>?,
 
 	read text: Can<string>,
 	read text_size: Can<number>?,
@@ -31,10 +31,7 @@ return function(props: Background)
 	local raw_text = source ""
 	local textbox: TextBox = create "TextBox" {
 		Size = function()
-			return UDim2.fromOffset(
-				read(props.width) or 0,
-				read(props.height) or 0
-			)
+			return UDim2.fromOffset(read(props.w) or 0, read(props.h) or 0)
 		end,
 		AutomaticSize = Enum.AutomaticSize.XY,
 

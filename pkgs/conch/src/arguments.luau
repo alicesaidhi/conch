@@ -2,6 +2,7 @@ local Players = game:GetService "Players"
 
 local console = require "./console"
 local context = require "./context"
+local language = require "../roblox_packages/language"
 local types = require "./types"
 
 local function noop(v: any) return v end
@@ -14,10 +15,12 @@ local anyT = {
 	convert = noop :: (any) -> any,
 
 	analysis = {
-		kind = "argument" :: "argument",
+		kind = "argument",
 		optional = false,
 		name = "any",
 		type = "any",
+
+		vararg = false,
 	},
 }
 
@@ -83,6 +86,7 @@ local numbersT = {
 	analysis = {
 		kind = "argument",
 		optional = false,
+		vararg = false,
 		name = "numbers",
 		type = "{ number }",
 	},
@@ -104,21 +108,15 @@ local booleanT = {
 	analysis = {
 		kind = "argument",
 		optional = false,
+		vararg = false,
 		name = "boolean",
 		type = "boolean",
 
-		suggestion_generator = function(text: string)
-			local suggestions = {}
-
-			if string.sub("true", 1, #text) == text then
-				table.insert(suggestions, "true")
-			end
-
-			if string.sub("false", 1, #text) == text then
-				table.insert(suggestions, "false")
-			end
-
-			return suggestions
+		suggestions = function()
+			return {
+				{ text = "true", display = "true" },
+				{ text = "false", display = "false" },
+			}
 		end,
 	},
 }
@@ -153,21 +151,15 @@ local booleansT = {
 	analysis = {
 		kind = "argument",
 		optional = false,
+		vararg = false,
 		name = "boolean",
-		type = "boolean",
+		type = "{ boolean }",
 
-		suggestion_generator = function(text: string)
-			local suggestions = {}
-
-			if string.sub("true", 1, #text) == text then
-				table.insert(suggestions, "true")
-			end
-
-			if string.sub("false", 1, #text) == text then
-				table.insert(suggestions, "false")
-			end
-
-			return suggestions
+		suggestions = function()
+			return {
+				{ text = "true", display = "true" },
+				{ text = "false", display = "false" },
+			}
 		end,
 	},
 }
@@ -199,6 +191,7 @@ local vectorT = {
 	analysis = {
 		kind = "argument",
 		optional = false,
+		vararg = false,
 		name = "vector",
 		type = "vector",
 	},
@@ -223,6 +216,7 @@ local vectorsT = {
 	analysis = {
 		kind = "argument",
 		optional = false,
+		vararg = false,
 		name = "vector",
 		type = "vector",
 	},
@@ -246,20 +240,14 @@ local function enum_map<V>(
 		analysis = {
 			kind = "argument",
 			optional = false,
+			vararg = false,
 			name = name or "enum",
 			description = description,
 			type = name or "enum",
-			suggestion_generator = function(text: string)
-				text = text:lower()
+			suggestions = function()
 				local suggestions = {}
 				for key in map do
-					if string.sub(key:lower(), 1, #text) ~= text then
-						continue
-					end
-					if string.find(key, "[^%w_-]") then
-						key = string.format("%q", key)
-					end
-					table.insert(suggestions, key)
+					table.insert(suggestions, { text = key, display = key })
 				end
 				return suggestions
 			end,
@@ -329,24 +317,17 @@ local playerT = {
 	analysis = {
 		kind = "argument",
 		optional = false,
+		vararg = false,
 		name = "player",
 		type = "Player",
-		suggestion_generator = function(text: string)
-			text = text:lower()
+		suggestions = function()
 			local suggestions = {}
 
-			if string.sub("@s", 1, #text) == text then
-				table.insert(suggestions, "@s")
-			end
-
 			for _, player in Players:GetPlayers() do
-				if
-					string.sub(player.Name:lower(), 1, #text) == text
-					or string.sub(player.DisplayName:lower(), 1, #text)
-						== text
-				then
-					table.insert(suggestions, player.Name)
-				end
+				table.insert(suggestions, {
+					text = player.Name,
+					display = `{player.DisplayName} (@{player.Name})`,
+				})
 			end
 
 			return suggestions
@@ -361,26 +342,16 @@ local playersT = {
 		kind = "argument",
 		optional = false,
 		name = "players",
+		vararg = false,
 		type = "{ Player }",
 		suggestion_generator = function(text: string)
-			text = text:lower()
 			local suggestions = {}
 
-			if string.sub("@s", 1, #text) == text then
-				table.insert(suggestions, "@s")
-			end
-			if string.sub("@a", 1, #text) == text then
-				table.insert(suggestions, "@a")
-			end
-
 			for _, player in Players:GetPlayers() do
-				if
-					string.sub(player.Name:lower(), 1, #text) == text
-					or string.sub(player.DisplayName:lower(), 1, #text)
-						== text
-				then
-					table.insert(suggestions, player.Name)
-				end
+				table.insert(suggestions, {
+					text = player.Name,
+					display = `{player.DisplayName} (@{player.Name})`,
+				})
 			end
 
 			return suggestions
@@ -458,22 +429,15 @@ local useridT = {
 		optional = false,
 		name = "userid",
 		type = "number",
+		vararg = false,
 		suggestion_generator = function(text: string)
-			text = text:lower()
 			local suggestions = {}
 
-			if string.sub("@s", 1, #text) == text then
-				table.insert(suggestions, "@s")
-			end
-
 			for _, player in Players:GetPlayers() do
-				if
-					string.sub(player.Name:lower(), 1, #text) == text
-					or string.sub(player.DisplayName:lower(), 1, #text)
-						== text
-				then
-					table.insert(suggestions, player.Name)
-				end
+				table.insert(suggestions, {
+					text = player.Name,
+					display = `{player.DisplayName} (@{player.Name})`,
+				})
 			end
 
 			return suggestions
@@ -489,25 +453,15 @@ local useridsT = {
 		optional = false,
 		name = "userids",
 		type = "{ number }",
+		vararg = false,
 		suggestion_generator = function(text: string)
-			text = text:lower()
 			local suggestions = {}
 
-			if string.sub("@s", 1, #text) == text then
-				table.insert(suggestions, "@s")
-			end
-			if string.sub("@a", 1, #text) == text then
-				table.insert(suggestions, "@a")
-			end
-
 			for _, player in Players:GetPlayers() do
-				if
-					string.sub(player.Name:lower(), 1, #text) == text
-					or string.sub(player.DisplayName:lower(), 1, #text)
-						== text
-				then
-					table.insert(suggestions, player.Name)
-				end
+				table.insert(suggestions, {
+					text = player.Name,
+					display = `{player.DisplayName} (@{player.Name})`,
+				})
 			end
 
 			return suggestions
@@ -531,6 +485,7 @@ local color3T = {
 	analysis = {
 		kind = "argument",
 		optional = false,
+		vararg = false,
 		name = "Color3",
 		type = "Color3",
 	},
@@ -574,6 +529,7 @@ local color3sT = {
 	analysis = {
 		kind = "argument",
 		optional = false,
+		vararg = false,
 		name = "Color3",
 		type = "Color3",
 	},
@@ -641,6 +597,7 @@ local durationT = {
 	analysis = {
 		kind = "argument",
 		optional = false,
+		vararg = false,
 		name = "duration",
 		type = "number",
 
@@ -648,25 +605,32 @@ local durationT = {
 			local words = string.split(text, " ")
 			local last_word = words[#words] or "1"
 
-			local suggestions = {}
+			local suggestions: { language.Suggestion } = {}
 			local the_rest = table.concat(words, " ", 1, #words - 1)
 			local before, suffix = string.match(last_word, "(.-)([A-z]+)$")
 
 			if suffix then
 				for example_suffix in DURATION_TIMES do
-					if suffix == string.sub(example_suffix, 1, #suffix) then
-						table.insert(suggestions, `{before}{example_suffix}`)
-					end
+					table.insert(suggestions, {
+						text = `{before}{example_suffix}`,
+						display = `{before}{example_suffix}`,
+					})
 				end
 			else
 				for example_suffix in DURATION_TIMES do
-					table.insert(suggestions, `{last_word}{example_suffix}`)
+					table.insert(suggestions, {
+						text = `{last_word}{example_suffix}`,
+						display = `{last_word}{example_suffix}`,
+					})
 				end
 			end
 
 			the_rest = if #the_rest > 0 then `{the_rest} ` else the_rest
 			for idx, s in suggestions do
-				suggestions[idx] = `"{the_rest}{s}"`
+				suggestions[idx] = {
+					text = `{the_rest}{s.text}`,
+					display = `{the_rest}{s.display}`,
+				}
 			end
 
 			return suggestions
@@ -687,18 +651,41 @@ end
 type G<T> = (name: string?, description: string?) -> T
 
 local function variadic<T>(argument: T): ...T
-	local a: types.Type = argument :: any
-	a.kind = "varargs"
+	local a: language.AnalysisArgument = argument :: any
+	assert(a.kind == "argument")
+	a.vararg = true
 	return a
 end
 
 local function optional<T>(argument: T): T | nil
-	local a: types.Type = argument :: any
+	local a: language.AnalysisArgument = argument :: any
 	a.optional = true
 	return a
 end
 
+local function literal<T>(value: T, name: string?, description: string?): T
+	return {
+		kind = "literal",
+		name = name or "",
+		description = description or "",
+		value = value,
+		optional = false,
+	} :: any
+end
+
+local function overload<T>(
+	p: { { description: string, arguments: { any } } }
+): ...any
+	return {
+		kind = "overload",
+		overloads = p,
+	} :: any
+end
+
 return {
+
+	overload = overload,
+	literal = literal,
 
 	any = console.register_type("any", anyT) :: G<any>,
 	string = console.register_type("string", stringT) :: G<string>,

@@ -3,7 +3,7 @@ local types = require "./types"
 return {
 	--- The local user of the client. When false, the client does not have an user
 	--- associated with them and cannot run any commands.
-	local_user = false :: types.UserPublic | false,
+	local_user = false :: types.User | false,
 	--- Maps roles to an array of permissions.
 	roles = {} :: { [types.Role]: { types.Permission } },
 

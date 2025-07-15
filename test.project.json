@@ -6,13 +6,10 @@
         
         "ReplicatedStorage": {
 
-            "roblox_packages": {
-                "$path": "roblox_packages"
-            },
-
-            "ui": {
-                "$path": "src"
+            "packages": {
+                "$path": "pkgs"
             }
+
         }
     }
 }

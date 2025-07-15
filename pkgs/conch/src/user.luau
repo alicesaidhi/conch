@@ -15,7 +15,7 @@ end
 local function create_user(options: {
 	name: string,
 	player: Player | false,
-}): types.UserPublic
+}): types.User
 	local user = {
 		id = obtain_user_key(options.player, options.name),
 		name = options.name,
@@ -35,7 +35,7 @@ local function create_user(options: {
 	return user
 end
 
-local function has_permissions(user: types.UserPublic, ...: types.Permission)
+local function has_permissions(user: types.User, ...: types.Permission)
 	-- print("checking if", user.name, "with roles", user.roles, "has permission to run", ...)
 	local permissions_necessary = { ... }
 
@@ -54,7 +54,7 @@ local function has_permissions(user: types.UserPublic, ...: types.Permission)
 	return false
 end
 
-local function disconnect_user(user: types.UserPublic)
+local function disconnect_user(user: types.User)
 	local self = user :: types.User
 	if self.disconnected == true then return end
 
@@ -62,7 +62,7 @@ local function disconnect_user(user: types.UserPublic)
 	state.users[self.id] = nil
 end
 
-local function give_roles(user: types.UserPublic, ...: types.Role)
+local function give_roles(user: types.User, ...: types.Role)
 	if user.disconnected then return end
 	local self = user :: types.User
 	local new_roles: { string } = {}
@@ -89,7 +89,7 @@ local function give_roles(user: types.UserPublic, ...: types.Role)
 	end
 end
 
-local function remove_roles(user: types.UserPublic, ...: types.Role)
+local function remove_roles(user: types.User, ...: types.Role)
 	if user.disconnected then return end
 	local self = user :: types.User
 	local new_roles = table.clone(self.roles)

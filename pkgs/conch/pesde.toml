@@ -1,17 +1,14 @@
 name = "alicesaidhi/conch"
-version = "0.2.5-rc.2"
+version = "0.3.0"
 includes = ["src/**", "pesde.toml"]
 
 [target]
 environment = "roblox"
-lib = "src/lib.luau"
+lib = "src/init.luau"
 build_files = ["src"]
 
 [indices]
 default = "https://github.com/daimond113/pesde-index"
 
 [dependencies]
-ast = { workspace = "alicesaidhi/conch_ast", version = "^", target = "roblox" }
-compiler = { workspace = "alicesaidhi/conch_compiler", version = "^", target = "roblox" }
-vm = { workspace = "alicesaidhi/conch_vm", version = "^", target = "roblox" }
-intel = { workspace = "alicesaidhi/conch_analysis", version = "^", target = "roblox" }
+language = { workspace = "alicesaidhi/conch_language" }

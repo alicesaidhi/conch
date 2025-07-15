@@ -1,6 +1,8 @@
 local ReplicatedStorage = game:GetService "ReplicatedStorage"
 local RunService = game:GetService "RunService"
 
+local language = require "../roblox_packages/language"
+
 export type UpdateRolePacket = {
 	name: string,
 
@@ -16,17 +18,8 @@ export type UpdateUserRolesPacket = { id: string, roles: { string } }
 
 export type RegisterCommandPacket = {
 	name: string,
-	description: string,
 	permissions: { string },
-	arguments: {
-		{
-			kind: "varargs" | "arg",
-			optional: boolean,
-			type: string,
-			name: string,
-			description: string,
-		}
-	},
+	overloads: { language.Overload },
 }
 
 export type InvokeCommandPacket = {
@@ -58,6 +51,8 @@ export type RemoteIndex = {
 	register_command: RemoteEvent,
 	log: RemoteEvent,
 	log_command: RemoteEvent,
+
+	ready: RemoteEvent,
 }
 
 export type LogExecutionPacket = string
@@ -107,6 +102,8 @@ function net.server.init()
 		register_command = remote "register_command",
 		log = remote "log",
 		log_command = remote "log_command",
+
+		ready = remote "ready",
 	}
 
 	remotes = remote_index
@@ -131,11 +128,27 @@ function net.client.init()
 		register_command = remote "register_command",
 		log = remote "log",
 		log_command = remote "log_command",
+
+		ready = remote "ready",
 	}
 
 	remotes = remote_index
 
 	net.client.initialized = true
+end
+
+function net.server.on_ready(fn: (Player) -> ())
+	assert(net.server.initialized, "client not initialized")
+	assert_run_context "server"
+
+	remotes.ready.OnServerEvent:Connect(fn :: any)
+end
+
+function net.client.fire_ready()
+	assert(net.client.initialized, "client not initialized")
+	assert_run_context "client"
+
+	remotes.ready:FireServer()
 end
 
 function net.client.on_user_roles_update(
@@ -149,9 +162,11 @@ function net.client.on_user_roles_update(
 	remotes.update_user_roles.OnClientEvent:Connect(callback :: any)
 end
 
-function net.client.on_command_registered(callback: (
-	info: RegisterCommandPacket
-) -> ())
+function net.client.on_command_registered(
+	callback: (
+		info: RegisterCommandPacket
+	) -> ()
+)
 	assert(net.client.initialized, "client not initialized")
 	assert_run_context "client"
 
@@ -310,6 +325,22 @@ function net.server.fire_update_role_perms(
 	}
 
 	remotes.update_role_permissions:FireAllClients(role_packet)
+end
+
+function net.server.fire_update_role_perms_to(
+	player: Player,
+	role: string,
+	permissions: { string }
+)
+	assert(net.server.initialized, "server not initialized")
+	assert_run_context "server"
+
+	local role_packet: UpdateRolePacket = {
+		name = role,
+		permissions = permissions,
+	}
+
+	remotes.update_role_permissions:FireClient(player, role_packet)
 end
 
 return net

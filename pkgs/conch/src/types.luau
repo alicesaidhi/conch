@@ -1,12 +1,4 @@
-local types = require "../roblox_packages/types"
-
-export type Type = {
-	kind: "varargs" | "arg",
-	optional: boolean,
-	type: string,
-	name: string,
-	description: string,
-}
+local language = require "../roblox_packages/language"
 
 export type User = {
 	read id: string,
@@ -16,16 +8,6 @@ export type User = {
 	disconnected: boolean,
 	dirty: boolean,
 	roles: { string },
-}
-
-export type UserPublic = {
-	read id: string,
-	read name: string,
-	read player: Player | false,
-
-	read disconnected: boolean,
-	read roles: { string },
-	read dirty: boolean,
 }
 
 export type Log = {
@@ -46,20 +28,25 @@ export type AfterCommandRunContext = {
 	result: { unknown },
 }
 
+export type Overload = {
+	read kind: "overload",
+
+	overloads: { language.Overload },
+}
+
 export type CommandRepresentation = {
 	read name: string,
-	read description: string,
 	read permissions: { string },
 	read callback: (...any) -> ...any,
-	read type_info: types.AnalysisCommand,
-	read arguments: { Type },
+
+	read information: language.Metadata,
 
 	dirty_replicate: boolean,
 }
 
 export type Console = {
-	read vm: types.VirtualMachine,
-	read commands: { CommandRepresentation },
+	read vm: language.LanguageVm,
+	read commands: { [string]: CommandRepresentation },
 	output: (Log) -> (),
 }
 

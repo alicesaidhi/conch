@@ -8,8 +8,8 @@ local read = vide.read
 
 type Can<T> = T | () -> T
 type Background = {
-	read width: Can<number>?,
-	read height: Can<number>?,
+	read w: Can<number>?,
+	read h: Can<number>?,
 	read x: Can<number>?,
 	read y: Can<number>?,
 	read xs: Can<number>?,
@@ -43,8 +43,8 @@ return function(props: Background)
 
 	return create "TextLabel" {
 		Size = function()
-			local width, height = read(props.width), read(props.height)
-			return UDim2.new(0, width or 0, 0, height or 0)
+			local w, h = read(props.w), read(props.h)
+			return UDim2.new(0, w or 0, 0, h or 0)
 		end,
 		Position = function()
 			return UDim2.new(

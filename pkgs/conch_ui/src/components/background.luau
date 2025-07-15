@@ -6,8 +6,8 @@ local read = vide.read
 
 type Can<T> = T | () -> T
 type Background = {
-	read width: Can<number>?,
-	read height: Can<number>?,
+	read w: Can<number>?,
+	read h: Can<number>?,
 	read x: Can<number>?,
 	read y: Can<number>?,
 	read xs: Can<number>?,
@@ -16,6 +16,7 @@ type Background = {
 	read zindex: Can<number>?,
 	read auto: Can<Enum.AutomaticSize | "X" | "Y" | "XY">?,
 	read color: Can<Color3>?,
+	read transparency: Can<number>?,
 	read layout: Can<number>?,
 
 	[number]: unknown,
@@ -24,12 +25,12 @@ type Background = {
 return function(props: Background)
 	return create "Frame" {
 		Size = function()
-			local width, height = read(props.width), read(props.height)
+			local w, h = read(props.w), read(props.h)
 			return UDim2.new(
-				if width then 0 else 1,
-				width or 0,
-				if height then 0 else 1,
-				height or 0
+				if w then 0 else 1,
+				w or 0,
+				if h then 0 else 1,
+				h or 0
 			)
 		end,
 		Position = function()
@@ -52,7 +53,8 @@ return function(props: Background)
 		LayoutOrder = props.layout,
 
 		BackgroundColor3 = props.color or theme.background,
-		BackgroundTransparency = theme.background_transparency,
+		BackgroundTransparency = props.transparency
+			or theme.background_transparency,
 
 		unpack(props),
 	}

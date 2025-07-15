@@ -48,7 +48,7 @@ export type Issue = {
 	read span: vector,
 }
 
-export type Output = { issues: { Issue }, result: ast.Ast }
+export type Output = { issues: { Issue }, result: ast.Ast? }
 
 local function parse(input: buffer): Output
 	local pos = 0
@@ -591,10 +591,14 @@ local function parse(input: buffer): Output
 				current_kind == "break"
 				or current_kind == "return"
 				or current_kind == "continue"
+				or is_delimiter()
+				or current_kind == "eof"
 			then
 				break
-			else
+			elseif current_kind == "identifier" or current_kind == "$" then
 				table.insert(body, parse_command())
+			else
+				expected_but "statement"
 			end
 		end
 

@@ -115,40 +115,6 @@ return function()
 			callback = task.wait,
 		})
 
-		console.register_command("pairs", {
-			description = "Iterates over a table",
-			arguments = function()
-				return arg.table("t", "Table to iterate over")
-			end,
-			callback = function(value: { [any]: any })
-				local fn = pairs(value)
-				local key
-
-				return function()
-					local next_key, next_value = fn(value, key)
-					key = next_key
-					return next_key, next_value
-				end
-			end,
-		})
-
-		console.register_command("ipairs", {
-			description = "Iterates over an array",
-			arguments = function()
-				return arg.table("t", "Table to iterate over")
-			end,
-			callback = function(value: { [any]: any })
-				local fn = ipairs(value)
-				local key = 0
-
-				return function()
-					local next_key, next_value = fn(value, key)
-					key = next_key
-					return next_key, next_value
-				end
-			end,
-		})
-
 		console.register_quick("error", error)
 		console.register_quick("warn", warn)
 		console.register_quick("info", info)

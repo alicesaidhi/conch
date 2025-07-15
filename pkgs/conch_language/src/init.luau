@@ -2,81 +2,23 @@ local analyze = require "@self/analysis"
 local ast = require "@self/ast"
 local treewalker = require "@self/treewalker"
 
-type LanguageVm = {
-	global_metadata: { [string]: Metadata },
-	vars_metadata: { [string]: Metadata },
-
-	state: treewalker.ExecutionState,
-}
-type TypeAnalysisInfo = {
-	remove: (TypeAnalysisInfo) -> (),
-}
-
--- a value that can be evaluated by a basic treewalker
-type SimpleValue = | number | string | boolean
-
-type Overload = {
-	read name: string,
-	read description: string?,
-	read arguments: { AnalysisArgument },
-}
-
-type Suggestion = {
-	read text: string,
-	read display: string,
-}
-
-type Metadata = {
-	read key: string,
-	read is_var: boolean?,
-
-	read overloads: { Overload },
-}
-
-type AnalysisArgument = | {
-	read kind: "literal",
-	read name: string,
-	read description: string,
-
-	read value: string | boolean,
-
-	read optional: boolean,
-} | {
-	read kind: "argument",
-	read name: string,
-	read description: string,
-	read type: string,
-
-	read suggestions: (unknown) -> { Suggestion },
-
-	read optional: boolean,
-	read vararg: boolean,
-}
-
-type AnalysisResult = {
-	replace: vector,
-	suggestions: { Suggestion },
-	additional_info: {
-		name: string,
-		description: string,
-	}?,
-}
-
-type AnalysisInputState = {
-	cursor: number,
-	input: string,
-	vm: LanguageVm,
-	result: AnalysisResult?,
-	issues: { ast.Issue },
-}
+export type LanguageVm = analyze.LanguageVm
+export type TypeAnalysisInfo = analyze.TypeAnalysisInfo
+export type SimpleValue = analyze.SimpleValue
+export type Overload = analyze.Overload
+export type Suggestion = analyze.Suggestion
+export type Metadata = analyze.Metadata
+export type AnalysisArgument = analyze.AnalysisArgument
+export type AnalysisResult = analyze.AnalysisResult
+export type AnalysisInputState = analyze.AnalysisInputState
 
 -----
 
-type RunResult =
+export type RunResult =
 	| { ok: true, values: { unknown }? }
 	| { ok: false, why: { string } }
 
-type LanguageInterface = {
+export type LanguageInterface = {
 
 	create_vm: () -> LanguageVm,
 	set_command: (LanguageVm, key: string, value: unknown) -> (),
@@ -157,6 +99,8 @@ local language: LanguageInterface = {
 
 	run = run,
 	analyze = analyze,
+
+	version = {},
 }
 
 return language

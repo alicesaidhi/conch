@@ -1,77 +1,92 @@
 local ast = require "./ast"
 local treewalker = require "./treewalker"
-
-type LanguageVm = {
+export type LanguageVm = {
 	global_metadata: { [string]: Metadata },
 	vars_metadata: { [string]: Metadata },
 
 	state: treewalker.ExecutionState,
 }
-type TypeAnalysisInfo = {
+export type TypeAnalysisInfo = {
 	remove: (TypeAnalysisInfo) -> (),
 }
 
 -- a value that can be evaluated by a basic treewalker
-type SimpleValue = | number | string | boolean
+export type SimpleValue = | number | string | boolean
 
-type Overload = {
-	read name: string,
+export type Overload = {
 	read description: string?,
 	read arguments: { AnalysisArgument },
 }
 
-type Suggestion = {
+export type Suggestion = {
 	read text: string,
 	read display: string,
 }
 
-type Metadata = {
+export type Metadata = {
+	read name: string,
+	read description: string,
 	read key: string,
 	read is_var: boolean?,
 
 	read overloads: { Overload },
 }
 
-type AnalysisArgument = | {
+export type AnalysisArgument = | {
 	read kind: "literal",
 	read name: string,
-	read description: string,
+	read description: string?,
 
 	read value: string | boolean,
 
-	read optional: boolean,
+	optional: boolean,
 } | {
 	read kind: "argument",
 	read name: string,
-	read description: string,
+	read description: string?,
 	read type: string,
 
-	read suggestions: (unknown) -> { Suggestion },
+	read suggestions: ((unknown) -> { Suggestion })?,
 
-	read optional: boolean,
-	read vararg: boolean,
+	optional: boolean,
+	vararg: boolean,
 }
 
-type AnalysisResult = {
+export type AnalysisResult = {
 	replace: vector,
 	suggestions: { Suggestion },
 	additional_info: {
 		name: string,
 		description: string,
+		optional: boolean,
+		type: string,
 	}?,
+	issues: { ast.Issue },
 }
 
-type AnalysisInputState = {
+export type AnalysisInputState = {
 	vars: { [string]: unknown },
 	globals: { [string]: unknown },
 
 	cursor: number,
 	input: string,
 	vm: LanguageVm,
-	result: AnalysisResult?,
+	result: {
+		replace: vector,
+		suggestions: { Suggestion },
+		additional_info: {
+			name: string,
+			description: string?,
+			optional: boolean,
+			type: string,
+		}?,
+	}?,
 	issues: { ast.Issue },
 }
 
+--[=[
+Communicates if the cursor is either after or before the node
+]=]
 local function span_cursor(
 	state: AnalysisInputState,
 	span: vector
@@ -171,9 +186,23 @@ function autocomplete.visit_var_root(state, node)
 	if span_cursor(state, node.span) ~= "within" then return end
 	local replace_span = node.span
 	local suggestions: { Suggestion } = {}
+	local additional_info
 
 	if node.kind == "global" then
 		for global in state.globals do
+			if node.token.text == global then
+				local command_metadata =
+					state.vm.global_metadata[node.token.text]
+
+				additional_info = {
+					name = command_metadata.name,
+					description = command_metadata.description,
+
+					type = "",
+					optional = false,
+				}
+			end
+
 			table.insert(suggestions, {
 				text = global,
 				display = global,
@@ -191,6 +220,7 @@ function autocomplete.visit_var_root(state, node)
 	state.result = {
 		replace = replace_span,
 		suggestions = suggestions,
+		additional_info = additional_info,
 	}
 end
 
@@ -221,6 +251,7 @@ function autocomplete.visit_expr_lambda(state, node)
 end
 
 function autocomplete.visit_command(state, node)
+	if span_cursor(state, node.span) ~= "within" then return end
 	if span_cursor(state, node.var.span) ~= "after" then return end
 	local root = node.var.root
 	if #node.var.suffixes > 0 then return end
@@ -242,24 +273,23 @@ function autocomplete.visit_command(state, node)
 	local replace_span = vector.create(0, state.cursor)
 
 	for idx, argument in node.arguments do
+		if span_cursor(state, argument.span) == "before" then break end
 		current_argument_idx = idx
 
 		if span_cursor(state, argument.span) == "within" then
 			replace_span = argument.span
 		end
-		if span_cursor(state, argument.span) ~= "before" then break end
 
 		-- evaluate expression to an limited extent
 		local result = evaluate_expression(argument)
-
 		-- evaluate argument
 		for i = #acceptable_overloads, 1, -1 do
 			local overload = acceptable_overloads[i]
 			local arg_b = overload.arguments[idx]
+			if arg_b.kind ~= "literal" then continue end
 			if not arg_b then table.remove(acceptable_overloads, i) end
 			-- determine if overload matches
 			if result == null then continue end
-			if arg_b.kind ~= "literal" then continue end
 			if arg_b.optional and result == nil then continue end
 			if arg_b.value ~= result then
 				table.remove(acceptable_overloads, i)
@@ -272,7 +302,7 @@ function autocomplete.visit_command(state, node)
 		end
 	end
 
-	if #acceptable_overloads > 0 then
+	if #acceptable_overloads == 0 then
 		table.insert(state.issues, {
 			why = `no overloads match command "{command_name}"`,
 			span = node.span,
@@ -281,20 +311,41 @@ function autocomplete.visit_command(state, node)
 	end
 
 	local suggestions: { Suggestion } = {}
+	local argument_data: AnalysisArgument?
+	local additional_data
 
 	for _, overload: Overload in acceptable_overloads do
 		local argument: AnalysisArgument =
 			overload.arguments[current_argument_idx]
+		argument_data = argument
 
-		if argument.kind == "literal" then
+		additional_data = if argument
+				and argument_data.kind == "argument"
+			then {
+				name = argument_data.name,
+				description = argument_data.description,
+				type = argument_data.type,
+				optional = argument_data.optional,
+			}
+			elseif argument and argument_data.kind == "literal" then {
+				name = argument_data.name,
+				description = argument_data.description,
+				type = "literal",
+				optional = argument_data.optional,
+			}
+			else nil
+
+		if argument and argument.kind == "literal" then
 			table.insert(suggestions, {
 				text = argument.value,
 				display = tostring(argument.value),
 			})
-		else
+		elseif argument then
 			local value =
 				string.sub(state.input, replace_span.x + 1, replace_span.y + 1)
-			local received_suggestions = argument.suggestions(value)
+			local received_suggestions = argument.suggestions
+					and argument.suggestions(value)
+				or {}
 
 			table.move(
 				received_suggestions,
@@ -306,13 +357,12 @@ function autocomplete.visit_command(state, node)
 		end
 	end
 
+	assert(command_metadata) -- ???
+
 	state.result = {
 		replace = replace_span,
 		suggestions = suggestions,
-		additional_info = {
-			name = acceptable_overloads[1].name,
-			description = acceptable_overloads[1].description or "",
-		},
+		additional_info = additional_data,
 	}
 end
 
@@ -335,10 +385,16 @@ return function(
 	language_vm: LanguageVm,
 	input: string,
 	cursor: number
-): AnalysisResult?
+): AnalysisResult
 	local _, node: ast.Output = pcall(ast.parse, (buffer.fromstring(input)))
 
-	if not node.result then return nil end
+	if not node.result then
+		return {
+			suggestions = {},
+			replace = vector.zero,
+			issues = node.issues,
+		}
+	end
 
 	-- we create a mutable copy of the vm, where vars can be written to.
 	-- this is to make improved autocomplete easy, without actually affecting the state.
@@ -355,5 +411,11 @@ return function(
 
 	ast.visit.visit_ast(autocomplete, input, node.result)
 
-	return input.result
+	return {
+		replace = input.result and input.result.replace or vector.zero,
+		suggestions = input.result and input.result.suggestions or {},
+		additional_info = input.result and input.result.additional_info,
+
+		issues = input.issues,
+	}
 end

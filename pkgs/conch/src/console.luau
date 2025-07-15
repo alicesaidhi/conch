@@ -1,11 +1,7 @@
 local Players = game:GetService "Players"
 local RunService = game:GetService "RunService"
 
-local ast = require "../roblox_packages/ast"
-local compiler = require "../roblox_packages/compiler"
-local create_vm = require "../roblox_packages/vm"
-local ctypes = require "../roblox_packages/types"
-local intel = require "../roblox_packages/intel"
+local language = require "../roblox_packages/language"
 local net = require "./net"
 local signal = require "./signal"
 local state = require "./state"
@@ -14,8 +10,7 @@ local user = require "./user"
 
 local IS_SERVER = RunService:IsServer()
 
-local vm_state = { locals = {}, upvalues = {}, instructions = {} }
-local vm = create_vm() :: ctypes.VirtualMachine
+local vm = language.create_vm()
 local commands: { [string]: types.CommandRepresentation } = {}
 local after_run = signal()
 
@@ -30,28 +25,49 @@ local types = {}
 local function register_type<T>(
 	type: string,
 	data: {
-		convert: (any) -> T,
-		analysis: ctypes.AnalysisCommandArgument
-			| ctypes.AnalysisCommandVariadic,
+		convert: ((any) -> T)?,
+		analysis: language.AnalysisArgument?,
 	}
 )
 	types[type] = data
 
+	if data.analysis then assert(data.analysis.kind == "argument") end
+
 	return function(name: string?, description: string?): T
-		return {
-			name = name,
-			description = description,
-			optional = false,
-			kind = "arg",
-			type = type,
-		} :: any
+		if data.analysis then
+			assert(data.analysis.kind == "argument")
+
+			return {
+				kind = "argument",
+				name = name or data.analysis.name,
+				description = description or "",
+				type = type or "",
+
+				suggestions = data.analysis.suggestions,
+
+				optional = false,
+				vararg = false,
+			} :: any
+		else
+			return {
+				kind = "argument",
+				name = name or type,
+				description = description or "",
+				type = type,
+
+				suggestions = function() return {} end,
+
+				optional = false,
+				vararg = false,
+			} :: any
+		end
 	end
 end
 
 local function write_global(global: string, value: any)
-	assert(state.local_user, "cannot set global on server")
+	assert(not IS_SERVER, "cannot set global on server")
 	assert(string.match(global, "^[A-z%-@_]*$"), `{global} is not a valid name`)
-	vm.globals[global] = value
+	language.set_command(vm, global, value)
 end
 
 local function get_type(type: string) return types[type] end
@@ -75,48 +91,64 @@ local function replicate_to_player(
 
 	net.server.fire_register_command(player, {
 		name = representation.name,
-		description = representation.description,
 		permissions = representation.permissions,
-		arguments = representation.arguments,
+		overloads = representation.information.overloads,
 	})
 end
 
 local busy = false
 
 local function execute(text: string)
-	local ast = ast(text, false)
-
-	assert(ast.status ~= "pending", "unfinished block")
 	assert(not busy, "already executing!")
 
-	console.output { kind = "info", text = `> {ast.src}` }
-	if ast.status == "error" then
-		return console.output { kind = "error", text = ast.why }
-	end
+	console.output { kind = "info", text = `> {text}` }
 	busy = true
 
-	local instructions = compiler(ast.value, vm_state)
-	vm_state.instructions = {}
+	local result = language.run(vm, text)
 
-	local function on_complete(
-		ok: boolean,
-		result: number | string,
-		...: unknown
-	)
-		if not ok then
-			console.output { kind = "error", text = tostring(result) }
-		else
-			for i = 1, select("#", ...) do
-				console.output {
-					kind = "normal",
-					text = tostring((select(i, ...))),
-				}
+	if result.ok then
+		for _, value in result.values or {} :: never do
+			console.output { kind = "normal", text = tostring(value) }
+		end
+	else
+		console.output { kind = "error", text = table.concat(result.why, "\n") }
+	end
+
+	busy = false
+end
+
+local function determine_overload(overloads: { language.Overload }, ...: any)
+	if #overloads == 1 then return overloads[1] end
+
+	local acceptable_overloads: { language.Overload } =
+		table.clone(overloads) :: any
+
+	for idx = 1, select("#", ...) do
+		local value = select(idx, ...)
+
+		-- evaluate argument
+		for i = #acceptable_overloads, 1, -1 do
+			local overload = acceptable_overloads[i]
+			local arg_b = overload.arguments[idx]
+			if not arg_b then table.remove(acceptable_overloads, i) end
+			-- determine if overload matches
+			if arg_b.kind ~= "literal" then continue end
+			if arg_b.optional and value == nil then continue end
+			if arg_b.value ~= value then
+				table.remove(acceptable_overloads, i)
 			end
+		end
+
+		if #acceptable_overloads > 0 then
+			acceptable_overloads = table.clone(acceptable_overloads)
 		end
 	end
 
-	on_complete(pcall(vm.run, instructions))
-	busy = false
+	if #acceptable_overloads == 0 then
+		error "no overload matches the given command"
+	end
+
+	return acceptable_overloads[1]
 end
 
 local function register_command<T...>(
@@ -128,50 +160,87 @@ local function register_command<T...>(
 		callback: (T...) -> ...any,
 	}
 )
-	local arguments: { types.Type } = (
+	local arguments: { language.AnalysisArgument | types.Overload } = (
 		{ info.arguments() }
 		or {
 			{
-				kind = "varargs",
-				type = "any",
+				kind = "argument",
 				name = "...",
 				description = "unspecified",
+
+				suggestions = function() return {} end,
+
+				type = "any",
+				optional = false,
+				vararg = true,
 			},
 		}
 	) :: any
-	local analysis_arguments: { ctypes.AnalysisCommandArgument | ctypes.AnalysisCommandVariadic } =
-		{}
-	local converts: { (any) -> any } = {}
 
-	for index, argument in arguments do
-		local data = get_type(argument.type)
-			or warn(`no argument of type "{argument.type}" is registered`)
-			or get_type "any"
-		local clone = table.clone(data.analysis)
+	local map_overload_convert: { [language.Overload]: { (any) -> any } } = {}
+	local overloads: { language.Overload } = {}
 
-		converts[index] = data.convert
-		analysis_arguments[index] = {
-			kind = if argument.kind == "varargs"
-				then "variadic"
-				else "argument",
-			optional = argument.optional,
-			name = argument.name or clone.name,
-			description = argument.description,
-			type = clone.type,
-			suggestion_generator = clone.suggestion_generator,
+	if arguments[1] and arguments[1].kind == "overload" then
+		local overloads_arg = arguments[1]
+		assert(overloads_arg.kind == "overload")
+
+		for _, overload in overloads_arg.overloads do
+			local overload_converts = {}
+
+			for index, argument in overload.arguments do
+				if argument.kind == "argument" then
+					local data = get_type(argument.type)
+						or warn(
+							`no argument of type "{argument.type}" is registered`
+						)
+						or get_type "any"
+					overload_converts[index] = data.convert
+				end
+			end
+
+			table.insert(overloads, overload)
+			map_overload_convert[overload] = overload_converts
+		end
+	else
+		local overload_converts = {}
+		local analysis_arguments: { language.AnalysisArgument } = {}
+		for index, argument in arguments do
+			assert(
+				argument.kind ~= "overload",
+				"overloads must be the first argument"
+			)
+
+			if argument.kind == "argument" then
+				local data = get_type(argument.type)
+					or warn(
+						`no argument of type "{argument.type}" is registered`
+					)
+					or get_type "any"
+				overload_converts[index] = data.convert
+			end
+
+			analysis_arguments[index] = argument
+		end
+
+		local overload = {
+			description = info.description,
+			arguments = analysis_arguments,
 		}
+
+		table.insert(overloads, overload)
+		map_overload_convert[overload] = overload_converts
 	end
 
 	local representation: types.CommandRepresentation = {
 		name = name,
 		description = info.description,
 		permissions = info.permissions,
-		arguments = arguments,
-		type_info = {
-			kind = "command",
+
+		information = {
 			name = name,
-			description = info.description,
-			arguments = analysis_arguments,
+			description = info.description or "",
+			key = name,
+			overloads = overloads,
 		},
 
 		callback = info.callback,
@@ -180,51 +249,54 @@ local function register_command<T...>(
 
 	commands[name] = representation
 
-	vm.commands[name] = function(...)
-		local custom = { ... }
+	if not IS_SERVER then
+		write_global(name, function(...)
+			-- determine which overload is the correct one
+			local overload = determine_overload(overloads, ...)
+			if not overload then error "could not match with an overload" end
 
-		local function move(from: number, ...)
-			for i = 0, select("#", ...) - 1 do
-				custom[i + from] = select(i + 1, ...)
+			local custom = { ... }
+
+			local variadic, last_index
+			local converts = map_overload_convert[overload]
+			for idx, argument in overload.arguments do
+				if argument.kind == "argument" and argument.vararg then
+					variadic = converts[idx]
+					last_index = idx
+					break
+				elseif argument.optional and select(idx, ...) == nil then
+					custom[idx] = nil
+				elseif converts[idx] then
+					custom[idx] = converts[idx]((select(idx, ...)))
+				else
+					custom[idx] = select(idx, ...)
+				end
 			end
-		end
 
-		local variadic, last_index
-		for idx, argument in arguments do
-			if argument.variadic then
-				variadic = converts[idx]
-				last_index = idx
-				break
-			elseif argument.optional and select(idx, ...) == nil then
-				custom[idx] = nil
-			else
-				custom[idx] = converts[idx]((select(idx, ...)))
+			if variadic and last_index then
+				for idx = last_index + 1, select("#", ...) do
+					custom[idx] = variadic((select(idx, ...)))
+				end
 			end
-		end
 
-		if variadic and last_index then
-			for idx = last_index + 1, select("#", ...) do
-				custom[idx] = variadic((select(idx, ...)))
-			end
-		end
+			local results =
+				{ pcall(info.callback, unpack(custom, 1, select("#", ...))) }
+			local ok = table.remove(results, 1)
 
-		local results =
-			{ pcall(info.callback, unpack(custom, 1, select("#", ...))) }
-		local ok = table.remove(results, 1)
+			local context = state.command_context[coroutine.running()]
 
-		local context = state.command_context[coroutine.running()]
+			after_run:fire {
+				ok = ok,
+				who = context and context.executor,
+				command = name,
+				arguments = custom,
+				result = results,
+			}
 
-		after_run:fire {
-			ok = ok,
-			who = context and context.executor,
-			command = name,
-			arguments = custom,
-			result = results,
-		}
+			if not ok then error(results[2], 0) end
 
-		if not ok then error(results[2]) end
-
-		return unpack(results)
+			return unpack(results)
+		end)
 	end
 
 	if IS_SERVER then
@@ -233,6 +305,15 @@ local function register_command<T...>(
 			replicate_to_player(player, representation)
 		end
 	end
+
+	language.attach_info(vm, {
+		name = name,
+		description = info.description or "",
+		key = name,
+		is_var = false,
+
+		overloads = overloads,
+	})
 
 	return representation
 end
@@ -246,32 +327,8 @@ local function register(name: string, fn: (...any) -> ...any, ...: string)
 	})
 end
 
-local function analyze(src: string, where: number): ctypes.AnalysisInformation
-	local combined_variables = {}
-	local analyze_commands = {}
-
-	local index = 1
-	for name, command in commands do
-		analyze_commands[index] = command.type_info
-
-		index += 1
-	end
-
-	for global, value in vm.globals do
-		combined_variables[global] = value
-	end
-
-	for index, key in vm_state.locals do
-		combined_variables[key] = vm.locals[index]
-	end
-
-	return intel.generate_analysis_info {
-		code = src,
-		where = where,
-
-		variables = combined_variables,
-		commands = analyze_commands,
-	}
+local function analyze(src: string, where: number): language.AnalysisResult?
+	return language.analyze(vm, src, where)
 end
 
 return {
@@ -286,6 +343,4 @@ return {
 
 	register_type = register_type,
 	get_type = get_type,
-
-	ast = ast,
 }

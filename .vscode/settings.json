@@ -12,8 +12,6 @@
     "**/roblox_packages": false,
     "**/luau_packages": false,
     "out": true,
-
-	"pkgs/_foreign_*": true,
   },
   "luau-lsp.require.mode": "relativeToFile",
   "luau-lsp.require.directoryAliases": {

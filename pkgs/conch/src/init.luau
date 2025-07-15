@@ -1,16 +1,15 @@
 local Players = game:GetService "Players"
 local RunService = game:GetService "RunService"
 
-local arguments = require "./arguments"
-local ast = require "../roblox_packages/ast"
-local bootstrap = require "./bootstrap"
-local client = require "./client"
-local console = require "./console"
-local context = require "./context"
-local net = require "./net"
-local state = require "./state"
-local types = require "./types"
-local user = require "./user"
+local arguments = require "@self/arguments"
+local bootstrap = require "@self/bootstrap"
+local client = require "@self/client"
+local console = require "@self/console"
+local context = require "@self/context"
+local net = require "@self/net"
+local state = require "@self/state"
+local types = require "@self/types"
+local user = require "@self/user"
 
 export type Log = types.Log
 export type CommandContext = types.CommandContext
@@ -36,7 +35,9 @@ local function set_role(role: types.Role, ...: types.Permission)
 	if IS_SERVER then net.server.fire_update_role_perms(role, { ... }) end
 end
 
-local function initiate_user_replication(user: types.UserPublic)
+local function initiate_user_replication(user: types.User)
+	if not user.player then return end
+
 	for _, command in console.console.commands do
 		if not has_permissions(user, unpack(command.permissions)) then
 			continue
@@ -45,6 +46,7 @@ local function initiate_user_replication(user: types.UserPublic)
 		net.server.fire_register_command(user.player, {
 			name = command.name,
 			permissions = command.permissions,
+			overloads = command.information.overloads,
 		})
 	end
 end
@@ -124,12 +126,35 @@ end
 
 local function resend_new_commands(user: types.User)
 	if not user.dirty then return end
+	if not user.player then return end
 
 	for _, cmd in console.console.commands do
 		console.replicate_to_player(user.player, cmd)
 	end
 
 	user.dirty = false
+end
+
+local already_ready = {}
+local function on_ready(player: Player)
+	if already_ready[player] then return end
+
+	already_ready[player] = true
+	local user = get_user(player)
+	user.dirty = true
+
+	net.server.fire_create_user(player, user.id, user.name)
+
+	for role, permissions in state.roles do
+		net.server.fire_update_role_perms_to(player, role, permissions)
+	end
+
+	net.server.fire_update_user_roles(player, {
+		id = user.id,
+		roles = user.roles,
+	})
+
+	resend_new_commands(get_user(player))
 end
 
 local function initiate_default_lifecycle()
@@ -144,23 +169,25 @@ local function initiate_default_lifecycle()
 		net.client.on_role_info_received(client.update_role_permissions)
 		net.client.on_user_roles_update(client.update_user_roles)
 
+		net.client.fire_ready()
 		-- RunService.Heartbeat:Connect(zap.send_events)
 	elseif IS_SERVER then
 		net.server.init()
 
 		-- print("initiated lifecycle")
-		Players.PlayerAdded:Connect(get_user)
+		Players.PlayerAdded:Connect(get_user :: any)
 		Players.PlayerRemoving:Connect(disconnect_user_for_player)
-		FOREACH(Players:GetPlayers(), get_user)
+		FOREACH(Players:GetPlayers(), get_user :: any)
 		FOREACH(
 			Players:GetPlayers(),
 			function(player) resend_new_commands(get_user(player)) end
 		)
 
+		net.server.on_ready(on_ready)
 		net.server.on_command_invoke(invoke_server_command)
 
 		-- RunService.Heartbeat:Connect(zap.send_events)
-		RunService.Heartbeat:Connect(function()
+		RunService.PostSimulation:Connect(function()
 			for _, user in state.users do
 				resend_new_commands(user)
 			end
@@ -172,7 +199,6 @@ return {
 
 	args = arguments,
 
-	parse = ast,
 	execute = function(text: string)
 		local local_user = state.local_user
 		assert(IS_CLIENT, "cannot run commands outside of the client")
@@ -225,6 +251,18 @@ return {
 			if not player then return end
 			net.server.fire_log(player, { kind = kind, text = text })
 		else
+			console.console.output { kind = kind, text = text }
+		end
+	end,
+
+	log_to = function(
+		player: Player,
+		kind: "warn" | "info" | "error" | "normal",
+		text: string
+	)
+		if IS_SERVER then
+			net.server.fire_log(player, { kind = kind, text = text })
+		elseif Players.LocalPlayer == player then
 			console.console.output { kind = kind, text = text }
 		end
 	end,
