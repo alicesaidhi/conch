@@ -68,7 +68,6 @@ export type Issue = parse.Issue
 export type Output = parse.Output
 
 return {
-	ast = ast,
 	parse = parse,
 	visit = visit,
 }

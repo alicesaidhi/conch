@@ -1,8 +1,10 @@
+local analysis = require "../src/analysis"
 local ast = require "../src/ast"
 local astgen = require "./astgen"
 local compare = require "./astcompare"
 local display = require "./astdisplay"
 local generate = require "./astgenerate"
+local language = require "../src"
 local testkit = require "@vendor/testkit"
 local treewalker = require "../src/treewalker"
 
@@ -342,6 +344,7 @@ local function CASE_TREE(p: {
 		end
 	end
 	state.globals.ping = function(...) return "pong", ... end
+	state.globals.error = error
 
 	local buffer_input = buffer.fromstring(input)
 	local ok, parsed: ast.Output = pcall(ast.parse, buffer_input)
@@ -571,7 +574,7 @@ if ($var == 1) {
 	meow false
 } elseif ($var == 8) {
 	meow true
-} 
+}
 
 ]],
 		match = { false },
@@ -623,6 +626,14 @@ if ($var == 1) {
 		meow $n",
 		match = { 5 },
 	}
+
+	CASE_TREE {
+		name = "error",
+		input = "var = || { error oopsie } $var",
+		match = {},
+	}
 end)
+
+--todo: write tests for analysis but im lazy
 
 t.FINISH()

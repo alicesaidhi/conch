@@ -4,7 +4,7 @@ type Node = {
 	read span: vector,
 }
 
-type Scope = {
+export type Scope = {
 	up: Scope?,
 	root: true,
 	vars: { [string]: unknown },
@@ -14,7 +14,7 @@ type Scope = {
 	vars: { [string]: unknown },
 }
 
-type Trace = | {
+export type Trace = | {
 	read fn: (...any) -> (),
 	read fn_name: string?,
 	read origin: "luau",
@@ -25,7 +25,7 @@ type Trace = | {
 	read line: number,
 }
 
-type ExecutionState = {
+export type ExecutionState = {
 	globals: { [string]: unknown },
 	trace: { Trace },
 	scope: Scope,
@@ -34,11 +34,24 @@ type ExecutionState = {
 
 type Expression = ast.Expression | ast.ExpressionCommand
 
+export type ExecutionResult = {
+	ok: true,
+	values: nil | { unknown },
+} | {
+	ok: false,
+	err: string,
+}
+
 local using_machine: { [thread]: ExecutionState } = setmetatable(
 	{},
 	{ __mode = "k" }
 )
-local conch_functions = setmetatable({}, { __mode = "k" })
+local conch_functions: { [string]: string | true } = setmetatable(
+	{},
+	{ __mode = "k" }
+)
+
+local PATTERN_REMOVE_TRACE = "^.+:%d+:%s*"
 
 --[=[
 Obtains a stack trace for the called function, which can be used to help
@@ -49,7 +62,9 @@ local function get_stack_trace_info(trace: Trace)
 
 	if not fn_name then
 		local name, script, line = debug.info(trace.fn, "nsl")
-		fn_name = `function {name}` or `{script}:{line}`
+		fn_name = if name ~= "" then `function {name}` else `{script}:{line}`
+	else
+		fn_name = `function {fn_name}`
 	end
 
 	if trace.origin == "conch" then
@@ -82,6 +97,14 @@ end
 
 local function pop_trace(state: ExecutionState) table.remove(state.trace) end
 
+local function reset_state(state: ExecutionState)
+	table.clear(state.trace)
+
+	while not state.scope.root do
+		state.scope = state.scope.up
+	end
+end
+
 --[=[
 Throws an error and stops further execution of the node.
 Resets the state back to the highest scope.
@@ -93,14 +116,11 @@ local function throw(state: ExecutionState, node: Node, why: string): never
 		table.insert(stack_trace, get_stack_trace_info(state.trace[i]))
 	end
 
-	table.clear(state.trace)
-
-	while not state.scope.root do
-		state.scope = state.scope.up
-	end
+	reset_state(state)
 
 	error(
-		`{why} at {node.span.x}:{node.span.y}\n{table.concat(stack_trace, "\n")}`
+		`{why} at {node.span.x}:{node.span.y}\n{table.concat(stack_trace, "\n")}`,
+		0
 	)
 end
 
@@ -146,13 +166,25 @@ end
 
 local function call(state: ExecutionState, node: Node, fn: any, ...: any)
 	if conch_functions[fn] then
+		local name = conch_functions[fn]
+		push_conch_trace(
+			state,
+			fn,
+			if name == true then nil else name,
+			node.span.z
+		)
 		local result = table.pack(fn(...))
+		pop_trace(state)
 		return result
 	end
 
 	local ok, values = pcall(function(...) return table.pack(fn(...)) end, ...)
 
-	if not ok then throw(state, node, `{values}`) end
+	push_luau_trace(state, fn, nil, node.span.z)
+	if not ok then
+		throw(state, node, (`{values}`):gsub(PATTERN_REMOVE_TRACE, ""))
+	end
+	pop_trace(state)
 
 	return values
 end
@@ -566,6 +598,10 @@ local function visit_stat_assign(
 	local key = node.identifier.text
 	local value = evaluate_expression(state, node.value)
 
+	if typeof(value) and conch_functions[value] then
+		conch_functions[value] = key
+	end
+
 	write_variable(state, key, value)
 	return nil
 end
@@ -645,21 +681,16 @@ local function create_state(): ExecutionState
 	return state
 end
 
-type ExecutionResult = {
-	ok: true,
-	values: nil | { unknown },
-} | {
-	ok: false,
-	err: string,
-}
-
 local function execute(state: ExecutionState, ast: ast.Ast): ExecutionResult
 	local ok, err = pcall(visit_block, state, ast.block)
 
-	if not ok then return {
-		ok = false,
-		err = err :: string,
-	} end
+	if not ok then
+		reset_state(state)
+		return {
+			ok = false,
+			err = err:gsub(PATTERN_REMOVE_TRACE, "") :: string,
+		}
+	end
 
 	local result_ok = {
 		ok = true,
@@ -679,7 +710,10 @@ local function execute(state: ExecutionState, ast: ast.Ast): ExecutionResult
 		if not value.value then continue end
 
 		ok, err = pcall(evaluate_expression, state, value.value)
-		if not ok then return { ok = false, err = err } end
+		if not ok then
+			reset_state(state)
+			return { ok = false, err = err:gsub(PATTERN_REMOVE_TRACE, "") }
+		end
 		result_ok.values[idx] = err
 	end
 
