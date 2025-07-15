@@ -11,7 +11,7 @@
     "**/Thumbs.db": true,
     "**/roblox_packages": false,
     "**/luau_packages": false,
-    "out": true
+    "out": true,
   },
   "luau-lsp.require.mode": "relativeToFile",
   "luau-lsp.require.directoryAliases": {
@@ -26,5 +26,6 @@
 		"editor.wrappingStrategy": "simple",
 		"editor.wordWrap": "bounded",
 		"editor.wordWrapColumn": 80
-	}
+	},
+	"luau-lsp.sourcemap.rojoProjectFile": "default.project.json"
 }

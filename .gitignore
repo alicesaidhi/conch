@@ -7,6 +7,7 @@
 **/network/client.luau
 **/dist
 **/default.project.json
+pkgs/_foreign_*
 !pkgs/standalone/default.project.json
 
 /out

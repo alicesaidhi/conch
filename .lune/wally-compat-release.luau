@@ -146,14 +146,10 @@ local function generate_wally_release_files(path: string)
 			`local main = require("./{lib_file_path_without}")`,
 		}
 
-		for value in string.gmatch(lib_file, "export type ([%w%.<>=_]-) = ") do
-			if string.find(value, "<") and not string.find(value, ">") then
-				value ..= ">"
-			end
-			local export_without_default = string.gsub(value, "=.->", ">")
+		for value in string.gmatch(lib_file, "export type(%b  )= ") do
 			table.insert(
 				init_file,
-				`export type {value} = main.{export_without_default}`
+				`export type{value}= main.{value:gsub("=[A-z%.]-", "")}`
 			)
 		end
 
@@ -325,6 +321,7 @@ local function get_order()
 	local mapped: { [string]: PesdeToml } = {}
 
 	for index, package in packages do
+		if package:find "_foreign" then continue end
 		local path = "./pkgs/" .. package
 		local file = fs.readFile(path .. "/pesde.toml")
 		local pesde_toml: PesdeToml = serde.decode("toml", file)
@@ -389,6 +386,8 @@ local function get_order()
 end
 
 local function cleanup_files(path: string)
+	if fs.isDir(path .. "/dist") == false then return end
+
 	fs.removeDir(path .. "/dist")
 	fs.removeFile(path .. "/wally.toml")
 	fs.removeFile(path .. "/default.project.json")

@@ -1,0 +1,15 @@
+{
+    "name": "UI",
+
+    "tree": {
+        "$className": "DataModel",
+        
+        "ReplicatedStorage": {
+
+            "packages": {
+                "$path": "pkgs"
+            }
+
+        }
+    }
+}
