@@ -19,6 +19,7 @@ export type RunResult =
 	| { ok: false, why: { string } }
 
 export type LanguageInterface = {
+	version: string,
 
 	create_vm: () -> LanguageVm,
 	set_command: (LanguageVm, key: string, value: unknown) -> (),
@@ -90,6 +91,8 @@ local function run(vm: LanguageVm, input: string): RunResult
 end
 
 local language: LanguageInterface = {
+	version = "0.3.0-rc.3",
+
 	create_vm = create_vm,
 
 	set_command = set_command,
@@ -99,8 +102,6 @@ local language: LanguageInterface = {
 
 	run = run,
 	analyze = analyze,
-
-	version = {},
 }
 
 return language

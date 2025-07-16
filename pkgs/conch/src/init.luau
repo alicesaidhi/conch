@@ -197,6 +197,8 @@ end
 
 return {
 
+	version = "0.3.0-rc.3",
+
 	args = arguments,
 
 	execute = function(text: string)

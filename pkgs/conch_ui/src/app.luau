@@ -7,6 +7,7 @@ local conch = require "../roblox_packages/conch"
 local corner = require "./components/corner"
 local flex = require "./components/flex"
 local gap = require "./components/gap"
+local language = require "../roblox_packages/language"
 local levenshtein_distance = require "./levenshtein_distance"
 local loading = require "./components/loading"
 local padding = require "./components/padding"
@@ -26,7 +27,8 @@ local effect = vide.effect
 local cleanup = vide.cleanup
 local indexes = vide.indexes
 
-local STARTUP_TEXT = "Conch 0.3.0\n"
+local STARTUP_TEXT = `\z
+conch-ui 0.3.0-rc.3\tconch-language {language.version}\tconch {language.version}`
 
 local history_n = 0
 local history = {}
