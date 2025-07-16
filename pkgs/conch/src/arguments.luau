@@ -344,7 +344,7 @@ local playersT = {
 		name = "players",
 		vararg = false,
 		type = "{ Player }",
-		suggestion_generator = function(text: string)
+		suggestions = function(text: string)
 			local suggestions = {}
 
 			for _, player in Players:GetPlayers() do
@@ -430,7 +430,7 @@ local useridT = {
 		name = "userid",
 		type = "number",
 		vararg = false,
-		suggestion_generator = function(text: string)
+		suggestions = function()
 			local suggestions = {}
 
 			for _, player in Players:GetPlayers() do
@@ -454,10 +454,11 @@ local useridsT = {
 		name = "userids",
 		type = "{ number }",
 		vararg = false,
-		suggestion_generator = function(text: string)
+		suggestions = function()
 			local suggestions = {}
 
 			for _, player in Players:GetPlayers() do
+				print(player)
 				table.insert(suggestions, {
 					text = player.Name,
 					display = `{player.DisplayName} (@{player.Name})`,
@@ -601,7 +602,7 @@ local durationT = {
 		name = "duration",
 		type = "number",
 
-		suggestion_generator = function(text: string)
+		suggestions = function(text: string)
 			local words = string.split(text, " ")
 			local last_word = words[#words] or "1"
 

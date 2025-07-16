@@ -2,6 +2,7 @@
 local Players = game:GetService "Players"
 
 local console = require "./console"
+local language = require "../roblox_packages/language"
 local net = require "./net"
 local state = require "./state"
 local types = require "./types"
@@ -37,6 +38,20 @@ local function register_command(data: net.RegisterCommandPacket)
 	-- warn("NEW SERVER COMMAND", data.name)
 	local arguments: types.Overload =
 		{ kind = "overload", overloads = data.overloads }
+
+	for _, overload in arguments.overloads do
+		for idx, argument in overload.arguments do
+			if argument.kind == "literal" then continue end
+			local type = console.get_type(argument.type)
+			if not type then continue end
+			local copy: any = table.clone(type.analysis)
+			copy.name = argument.name
+			copy.description = argument.description
+			copy.optional = argument.optional
+			if copy.kind == "argument" then copy.vararg = argument.vararg end
+			overload.arguments[idx] = copy
+		end
+	end
 
 	console.register_command(data.name, {
 		permissions = data.permissions,

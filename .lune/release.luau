@@ -133,6 +133,13 @@ local function generate_wally_release_files(path: string)
 	local pesde_toml: PesdeToml = serde.decode("toml", file)
 	if pesde_toml.private then return end
 
+	-- release on pesde first
+	process.spawn("pesde", { "publish --yes" }, {
+		cwd = path,
+		env = {},
+		shell = true,
+	})
+
 	local lib_file_path = pesde_toml.target.lib
 
 	assert(lib_file_path, "no lib file, cannot make wally release")
