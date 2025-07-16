@@ -44,22 +44,22 @@ local function concat(...: string)
 	return table.concat(t, " ")
 end
 
-local function print(...)
+local function conch_print(...)
 	local text = concat(...)
 	output { kind = "normal", text = text }
 end
 
-local function error(...)
+local function conch_error(...)
 	local text = concat(...)
 	error(text, 0)
 end
 
-local function warn(...)
+local function conch_warn(...)
 	local text = concat(...)
 	output { kind = "warn", text = text }
 end
 
-local function info(...)
+local function conch_info(...)
 	local text = concat(...)
 	output { kind = "info", text = text }
 end
@@ -79,19 +79,19 @@ end
 
 return function()
 	local function internal()
-		print(
+		conch_print(
 			`CONCH INTERNAL INFORMATION - {if RunService:IsClient()
 				then "CLIENT"
 				elseif RunService:IsServer() then "SERVER"
 				else "?"}`
 		)
-		print ""
-		print "REGISTERED ROLES:"
+		conch_print ""
+		conch_print "REGISTERED ROLES:"
 		for role, perms in state.roles do
-			print(`[{role}]: {table.concat(perms, ", ")}`)
+			conch_print(`[{role}]: {table.concat(perms, ", ")}`)
 		end
-		print ""
-		print "REGISTERED COMMANDS"
+		conch_print ""
+		conch_print "REGISTERED COMMANDS"
 	end
 
 	local function set(t: any, key: any, value: any) t[key] = value end
@@ -104,7 +104,7 @@ return function()
 			arguments = function()
 				return arg.variadic(arg.any("any", "Arguments to output"))
 			end,
-			callback = print,
+			callback = conch_print,
 		})
 
 		console.register_command("sleep", {
@@ -115,9 +115,9 @@ return function()
 			callback = task.wait,
 		})
 
-		console.register_quick("error", error)
-		console.register_quick("warn", warn)
-		console.register_quick("info", info)
+		console.register_quick("error", conch_error)
+		console.register_quick("warn", conch_warn)
+		console.register_quick("info", conch_info)
 		console.register_command("set", {
 			permissions = {},
 			description = "Attempts to set the given key and value onto the given object",
