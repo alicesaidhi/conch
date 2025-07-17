@@ -60,7 +60,7 @@ fix errors with commands
 local function get_stack_trace_info(trace: Trace)
 	local fn_name = trace.fn_name
 
-	if not fn_name then
+	if not fn_name and trace.fn then
 		local name, script, line = debug.info(trace.fn, "nsl")
 		fn_name = if name ~= "" then `function {name}` else `{script}:{line}`
 	else
@@ -69,8 +69,10 @@ local function get_stack_trace_info(trace: Trace)
 
 	if trace.origin == "conch" then
 		return `{trace.origin}:{trace.line} {fn_name}`
-	else
+	elseif trace.fn then
 		return `{trace.origin} {fn_name}`
+	else
+		return ``
 	end
 end
 

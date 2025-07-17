@@ -629,7 +629,7 @@ if ($var == 1) {
 
 	CASE_TREE {
 		name = "error",
-		input = "var = || { error oopsie } $var",
+		input = "oop value",
 		match = {},
 	}
 end)
