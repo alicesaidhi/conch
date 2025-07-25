@@ -876,7 +876,8 @@ local function parse(input: buffer): Output
 			arguments = arguments,
 			span = to_span(
 				var.span,
-				if #arguments > 0 then arguments[#arguments].span else nil
+				if #arguments > 0 then arguments[#arguments].span else nil,
+				if current_is "eof" then consume().span else nil
 			),
 		}
 	end

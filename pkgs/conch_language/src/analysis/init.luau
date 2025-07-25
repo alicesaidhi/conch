@@ -307,15 +307,12 @@ function autocomplete.visit_command(state, node)
 	local last_acceptable_overloads: { Overload } =
 		table.clone(command_metadata.overloads) :: any
 	local current_argument_idx = 1
-	local replace_span = vector.create(0, state.cursor)
+	local replace_span = vector.create(node.span.y, node.span.y)
 
 	for idx, argument in node.arguments do
 		if span_cursor(state, argument.span) == "before" then break end
 		current_argument_idx = idx
-
-		if span_cursor(state, argument.span) == "within" then
-			replace_span = argument.span
-		end
+		replace_span = argument.span
 
 		-- evaluate expression to an limited extent
 		local result = evaluate_expression(argument)
