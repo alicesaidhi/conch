@@ -148,6 +148,42 @@ local function get_value<T>(token: ast.Token<ast.TokenKind>): unknown
 	end
 end
 
+local function char(c: string) return string.byte(c) end
+
+local function is_start_ident_char(c: number)
+	return (char "a" <= c and c <= char "z")
+		or (char "A" <= c and c <= char "Z")
+		or c == char "@"
+		or c == char "_"
+end
+
+local function is_digit_char(c: number): boolean
+	return char "0" <= c and c <= char "9"
+end
+
+local function is_ident_char(c: number)
+	return is_start_ident_char(c) or c == char "-" or is_digit_char(c)
+end
+
+local function is_identifier(input: string)
+	if is_start_ident_char(string.byte(input, 1, 1)) then
+		for i = 2, #input do
+			if not is_ident_char(string.byte(input, i, i)) then return false end
+		end
+		return true
+	else
+		return false
+	end
+end
+
+local function wrap_if_necessary(input: string)
+	if is_identifier(input) then
+		return input
+	else
+		return string.format("%q", input)
+	end
+end
+
 local function evaluate_expression(
 	node: ast.Expression | ast.ExpressionCommand
 ): ...unknown
@@ -411,6 +447,12 @@ return function(
 	}
 
 	ast.visit.visit_ast(autocomplete, input, node.result)
+
+	if input.result and input.result.suggestions then
+		for idx, suggestion in input.result.suggestions do
+			(suggestion :: any).text = wrap_if_necessary(suggestion.text)
+		end
+	end
 
 	return {
 		replace = input.result and input.result.replace or vector.zero,

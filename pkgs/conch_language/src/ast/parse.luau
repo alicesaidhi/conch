@@ -409,6 +409,13 @@ local function parse(input: buffer): Output
 			kind = read_kind()
 		end
 
+		if kind == "error" then
+			throw(
+				`could not parse {buffer.readstring(input, start, pos - start)} into a token`,
+				vector.create(start, pos, initial_line)
+			)
+		end
+
 		return {
 			kind = kind,
 			text = buffer.readstring(input, start, pos - start),
@@ -1104,6 +1111,8 @@ local function parse(input: buffer): Output
 						righthandside and righthandside.span
 					),
 				}
+			elseif current_is "error" then
+				return expect_fatal "error"
 			elseif current_is "(" then
 				local expression =
 					parse_delimiter("(", ")", parse_expression_command)

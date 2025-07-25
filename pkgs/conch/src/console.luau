@@ -41,7 +41,7 @@ local function register_type<T>(
 				kind = "argument",
 				name = name or data.analysis.name,
 				description = description or "",
-				type = type or "",
+				type = type or data.analysis.type,
 
 				suggestions = data.analysis.suggestions,
 
@@ -186,15 +186,18 @@ local function register_command<T...>(
 
 		for _, overload in overloads_arg.overloads do
 			local overload_converts = {}
+			local overload_args = {}
 
 			for index, argument in overload.arguments do
 				if argument.kind == "argument" then
+					print(argument.type)
 					local data = get_type(argument.type)
 						or warn(
 							`no argument of type "{argument.type}" is registered`
 						)
 						or get_type "any"
 					overload_converts[index] = data.convert
+					overload_args[index] = table.clone(argument)
 				end
 			end
 

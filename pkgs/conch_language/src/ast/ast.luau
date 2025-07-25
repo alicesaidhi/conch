@@ -180,6 +180,7 @@ export type SimpleExpression =
 	| Var
 	| ExpressionUnary
 	| ExpressionVector
+	| Token<"error">
 
 export type Expression = | SimpleExpression | ExpressionBinary
 

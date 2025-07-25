@@ -93,7 +93,7 @@ local numbersT = {
 }
 
 local booleanT = {
-	convert = function(v)
+	convert = function(v: unknown)
 		if typeof(v) == "boolean" then
 			return v
 		elseif typeof(v) == "number" and v > 0 then
@@ -343,7 +343,7 @@ local playersT = {
 		optional = false,
 		name = "players",
 		vararg = false,
-		type = "{ Player }",
+		type = "players",
 		suggestions = function(text: string)
 			local suggestions = {}
 
@@ -539,29 +539,37 @@ local color3sT = {
 local DURATION_TIMES: { [string]: number } = {
 	ms = 1e-3,
 	milisecond = 1e-3,
+	miliseconds = 1e-3,
 
 	s = 1,
 	sec = 1,
 	second = 1,
+	seconds = 1,
 
 	min = 60,
 	minute = 60,
+	minutes = 60,
 
 	hr = 60 * 60,
 	hour = 60 * 60,
+	hours = 60 * 60,
 
 	d = 60 * 60 * 24,
 	day = 60 * 60 * 24,
+	days = 60 * 60 * 24,
 
 	wk = 60 * 60 * 24 * 7,
 	week = 60 * 60 * 24 * 7,
+	weeks = 60 * 60 * 24 * 7,
 
 	mo = 60 * 60 * 24 * 30,
 	month = 60 * 60 * 24 * 30,
+	months = 60 * 60 * 24 * 30,
 
 	y = 60 * 60 * 24 * 365,
 	yr = 60 * 60 * 24 * 365,
 	year = 60 * 60 * 24 * 365,
+	years = 60 * 60 * 24 * 365,
 }
 
 local function parse_duration(text: string)
@@ -569,7 +577,7 @@ local function parse_duration(text: string)
 	local n = 0
 
 	for _, word in words do
-		local duration_string, suffix = string.match(word, `(.-)([A-z]+)$`)
+		local duration_string, suffix = string.match(word, `(.-)[%s]?([A-z]+)$`)
 		if duration_string and suffix then
 			local mul = DURATION_TIMES[suffix]
 			if not mul then error(`"{mul}" is not a valid suffix`, 0) end
@@ -603,7 +611,7 @@ local durationT = {
 		type = "number",
 
 		suggestions = function(text: string)
-			local words = string.split(text, " ")
+			local words = string.split(text:gsub(`"(.*)"`, "%1"), " ")
 			local last_word = words[#words] or "1"
 
 			local suggestions: { language.Suggestion } = {}
