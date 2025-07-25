@@ -78,7 +78,7 @@ local function parse(input: buffer): Output
 	end
 
 	local function throw(msg: string, span: vector)
-		table.insert(issues, { why = msg, span = span })
+		table.insert(issues, { why = `SyntaxError: {msg}`, span = span })
 	end
 
 	local function panic(msg: string?): never
