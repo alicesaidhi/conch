@@ -179,6 +179,9 @@ return function()
 			cursor_position() - 1
 		)
 
+		input = string.gsub(input, `"(.*)"`, "%1", 1)
+		input = string.gsub(input, `'(.*)'`, "%1", 1)
+
 		for _, suggestion in suggestions do
 			if
 				not string.find(
@@ -310,12 +313,14 @@ return function()
 							local at =
 								string.sub(text, position - 1, position - 1)
 							local suggestions = filtered_suggestions()
+							local selected_suggestion =
+								suggestions[selected_suggestion()]
 
-							if at == "\t" and suggestions[1] then
+							if at == "\t" and selected_suggestion then
 								text = autofill(
 									raw_text(),
 									analysis().replace,
-									suggestions[selected_suggestion()].text
+									selected_suggestion.text
 								)
 							end
 
