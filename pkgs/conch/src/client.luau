@@ -40,14 +40,19 @@ local function register_command(data: net.RegisterCommandPacket)
 		{ kind = "overload", overloads = data.overloads }
 
 	for _, overload in arguments.overloads do
+		print(overload)
 		for idx, argument in overload.arguments do
 			if argument.kind == "literal" then continue end
 			local type = console.get_type(argument.type)
-			if not type then continue end
+			if not type then
+				warn("unregistered type", type)
+				return
+			end
 			local copy: any = table.clone(type.analysis)
 			copy.name = argument.name
 			copy.description = argument.description
 			copy.optional = argument.optional
+			copy.type = argument.type
 			if copy.kind == "argument" then copy.vararg = argument.vararg end
 			overload.arguments[idx] = copy
 		end
