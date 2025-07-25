@@ -150,7 +150,7 @@ local function generate_wally_release_files(path: string)
 	do
 		local lib_file_path_without = string.gsub(lib_file_path, ".luau", "")
 		local init_file = {
-			`local main = require("./{lib_file_path_without}")`,
+			`local main = require("./{lib_file_path_without:gsub("/init$", "")}")`,
 		}
 
 		for value in string.gmatch(lib_file, "export type(%b  )= ") do
@@ -170,11 +170,10 @@ local function generate_wally_release_files(path: string)
 			`local main = require(script.lib)`,
 		}
 
-		for value in string.gmatch(lib_file, "export type (.-) = module.") do
-			local export_without_default = string.gsub(value, "=.->", ">")
+		for value in string.gmatch(lib_file, "export type(%b  )= ") do
 			table.insert(
 				init_file,
-				`export type {value} = main.{export_without_default}`
+				`export type{value}= main.{value:gsub("=[A-z%.]-", "")}`
 			)
 		end
 
@@ -256,6 +255,7 @@ local function generate_wally_release_files(path: string)
 				"src",
 				"roblox_packages",
 				"luau_packages",
+				"**/stories",
 			},
 		}
 

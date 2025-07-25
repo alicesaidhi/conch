@@ -1,4 +1,4 @@
-local ast = require "../src/ast"
+local ast = require "./ast"
 
 type Node = {
 	read span: vector,
@@ -345,6 +345,27 @@ local function evaluate_table(
 	return t
 end
 
+local function wrap_op(
+	state: ExecutionState,
+	node: Node,
+	op: string,
+	a: any,
+	b: any,
+	fn: (a: any, b: any) -> unknown
+): unknown
+	local ok, result = pcall(fn, a, b)
+
+	if ok then
+		return result
+	else
+		return throw(
+			state,
+			node,
+			`attempt to {op} on {typeof(a)} and {typeof(b)}`
+		)
+	end
+end
+
 local function evaluate_binary(
 	state: ExecutionState,
 	node: ast.ExpressionBinary
@@ -360,39 +381,144 @@ local function evaluate_binary(
 	local operator = node.operator.kind
 
 	if operator == "!=" then
-		return left ~= right
+		return wrap_op(
+			state,
+			node,
+			"compare !=",
+			left,
+			right,
+			function(a, b) return a ~= b end
+		)
 	elseif operator == "%" then
-		return left % right
+		return wrap_op(
+			state,
+			node,
+			"get modulo of",
+			left,
+			right,
+			function(a, b) return a % b end
+		)
 	elseif operator == "*" then
-		return left * right
+		return wrap_op(
+			state,
+			node,
+			"multiply",
+			left,
+			right,
+			function(a, b) return a * b end
+		)
 	elseif operator == "+" then
-		return left + right
+		return wrap_op(
+			state,
+			node,
+			"add",
+			left,
+			right,
+			function(a, b) return a + b end
+		)
 	elseif operator == "-" then
-		return left - right
+		return wrap_op(
+			state,
+			node,
+			"subtract",
+			left,
+			right,
+			function(a, b) return a - b end
+		)
 	elseif operator == ".." then
-		return left .. right
+		return wrap_op(
+			state,
+			node,
+			"concatenate",
+			left,
+			right,
+			function(a, b) return a .. b end
+		)
 	elseif operator == "/" then
-		return left / right
+		return wrap_op(
+			state,
+			node,
+			"divide",
+			left,
+			right,
+			function(a, b) return a / b end
+		)
 	elseif operator == "//" then
-		return left // right
+		return wrap_op(
+			state,
+			node,
+			"idivide",
+			left,
+			right,
+			function(a, b) return a // b end
+		)
 	elseif operator == "<" then
-		return left < right
+		return wrap_op(
+			state,
+			node,
+			"compare <",
+			left,
+			right,
+			function(a, b) return a < b end
+		)
 	elseif operator == "<=" then
-		return left <= right
+		return wrap_op(
+			state,
+			node,
+			"compare <=",
+			left,
+			right,
+			function(a, b) return a <= b end
+		)
 	elseif operator == "==" then
-		return left == right
+		return wrap_op(
+			state,
+			node,
+			"compare ==",
+			left,
+			right,
+			function(a, b) return a == b end
+		)
 	elseif operator == ">" then
-		return left > right
+		return wrap_op(
+			state,
+			node,
+			"compare >",
+			left,
+			right,
+			function(a, b) return a > b end
+		)
 	elseif operator == ">=" then
-		return left >= right
+		return wrap_op(
+			state,
+			node,
+			"compare >=",
+			left,
+			right,
+			function(a, b) return a >= b end
+		)
 	elseif operator == "^" then
-		return left ^ right
+		return wrap_op(
+			state,
+			node,
+			"get the power",
+			left,
+			right,
+			function(a, b) return a ^ b end
+		)
 	elseif operator == "and" then
 		return left and right
 	elseif operator == "or" then
 		return left or right
 	elseif operator == "~=" then
-		return left ~= right
+		return wrap_op(
+			state,
+			node,
+			"compare ~=",
+			left,
+			right,
+			function(a, b) return a ~= b end
+		)
 	else
 		return throw(state, node, `unsupported operator {operator}`)
 	end
