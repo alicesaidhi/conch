@@ -40,10 +40,9 @@ local function register_command(data: net.RegisterCommandPacket)
 		{ kind = "overload", overloads = data.overloads }
 
 	for _, overload in arguments.overloads do
-		print(overload)
 		for idx, argument in overload.arguments do
 			if argument.kind == "literal" then continue end
-			local type = console.get_type(argument.type)
+			local type = console.get_type(argument.unique_identifier)
 			if not type then
 				warn("unregistered type", type)
 				return

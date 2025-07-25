@@ -31,7 +31,10 @@ local function register_type<T>(
 )
 	types[type] = data
 
-	if data.analysis then assert(data.analysis.kind == "argument") end
+	if data.analysis then
+		assert(data.analysis.kind == "argument")
+		data.analysis.unique_identifier = type
+	end
 
 	return function(name: string?, description: string?): T
 		if data.analysis then
@@ -41,7 +44,8 @@ local function register_type<T>(
 				kind = "argument",
 				name = name or data.analysis.name,
 				description = description or "",
-				type = type or data.analysis.type,
+				type = data.analysis.type,
+				unique_identifier = type,
 
 				suggestions = data.analysis.suggestions,
 
@@ -54,6 +58,7 @@ local function register_type<T>(
 				name = name or type,
 				description = description or "",
 				type = type,
+				unique_identifier = type,
 
 				suggestions = function() return {} end,
 
@@ -190,14 +195,26 @@ local function register_command<T...>(
 
 			for index, argument in overload.arguments do
 				if argument.kind == "argument" then
-					print(argument.type)
-					local data = get_type(argument.type)
+					local data = get_type(argument.unique_identifier)
 						or warn(
-							`no argument of type "{argument.type}" is registered`
+							`no argument of type "{argument.unique_identifier}" is registered`
 						)
 						or get_type "any"
 					overload_converts[index] = data.convert
-					overload_args[index] = table.clone(argument)
+
+					if
+						data.analysis
+						and data.analysis.kind == "argument"
+						and data.analysis.type ~= "any"
+					then
+						local copy = table.clone(data.analysis)
+						assert(copy.kind == "argument")
+						copy.vararg = argument.vararg
+						copy.optional = argument.optional
+						overload_args[index] = argument
+					else
+						overload_args[index] = argument
+					end
 				end
 			end
 
@@ -214,15 +231,27 @@ local function register_command<T...>(
 			)
 
 			if argument.kind == "argument" then
-				local data = get_type(argument.type)
+				local data = get_type(argument.unique_identifier)
 					or warn(
 						`no argument of type "{argument.type}" is registered`
 					)
 					or get_type "any"
 				overload_converts[index] = data.convert
-			end
 
-			analysis_arguments[index] = argument
+				if
+					data.analysis
+					and data.analysis.kind == "argument"
+					and data.analysis.type ~= "any"
+				then
+					local copy = table.clone(data.analysis)
+					assert(copy.kind == "argument")
+					copy.vararg = argument.vararg
+					copy.optional = argument.optional
+					analysis_arguments[index] = argument
+				else
+					analysis_arguments[index] = argument
+				end
+			end
 		end
 
 		local overload = {

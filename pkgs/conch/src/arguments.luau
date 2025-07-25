@@ -343,7 +343,7 @@ local playersT = {
 		optional = false,
 		name = "players",
 		vararg = false,
-		type = "players",
+		type = "{ Player }",
 		suggestions = function(text: string)
 			local suggestions = {}
 
@@ -365,7 +365,7 @@ local function convert_arg_to_userid(
 	local ctx = context.get_command_context()
 	if arg == "@s" then
 		return ctx and ctx.executor.player and ctx.executor.player.UserId
-			or error "not executed by a player"
+			or error "not executed by a proyer"
 	elseif typeof(arg) == "number" then
 		local ok, result = pcall(
 			function() return Players:GetNameFromUserIdAsync(arg) end
@@ -458,7 +458,6 @@ local useridsT = {
 			local suggestions = {}
 
 			for _, player in Players:GetPlayers() do
-				print(player)
 				table.insert(suggestions, {
 					text = player.Name,
 					display = `{player.DisplayName} (@{player.Name})`,

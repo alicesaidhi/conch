@@ -45,6 +45,7 @@ export type AnalysisArgument = | {
 	read name: string,
 	read description: string?,
 	read type: string,
+	unique_identifier: string,
 
 	read suggestions: ((unknown) -> { Suggestion })?,
 
