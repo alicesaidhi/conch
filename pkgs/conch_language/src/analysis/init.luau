@@ -148,36 +148,6 @@ local function get_value<T>(token: ast.Token<ast.TokenKind>): unknown
 	end
 end
 
-local function get_value_from_expression<T>(expr: ast.Expression?): unknown
-	if not expr then
-		return null
-	elseif expr.kind == "binary" then
-		return null
-	elseif expr.kind == "boolean" then
-		return get_value(expr.token)
-	elseif expr.kind == "evaluate" then
-		return null
-	elseif expr.kind == "lambda" then
-		return null
-	elseif expr.kind == "nil" then
-		return nil
-	elseif expr.kind == "number" then
-		return get_value(expr.token)
-	elseif expr.kind == "string" then
-		return get_value(expr.token)
-	elseif expr.kind == "table" then
-		return null
-	elseif expr.kind == "unary" then
-		return null
-	elseif expr.kind == "var" then
-		return null
-	elseif expr.kind == "vector" then
-		return vector.zero
-	else
-		return null
-	end
-end
-
 local function evaluate_expression(
 	node: ast.Expression | ast.ExpressionCommand
 ): ...unknown
@@ -372,9 +342,8 @@ function autocomplete.visit_command(state, node)
 				display = tostring(argument.value),
 			})
 		elseif argument then
-			local argument_at = node.arguments[current_argument_idx]
-			local value = get_value_from_expression(argument_at)
-
+			local value =
+				string.sub(state.input, replace_span.x + 1, replace_span.y + 1)
 			local received_suggestions = argument.suggestions
 					and argument.suggestions(value)
 				or {}
