@@ -28,7 +28,7 @@ local cleanup = vide.cleanup
 local indexes = vide.indexes
 
 local STARTUP_TEXT = `\z
-conch-ui 0.3.0-rc.5\tconch-language {language.version}\tconch {language.version}`
+conch-ui 0.3.0-rc.6\tconch-language {language.version}\tconch {language.version}`
 
 local history_n = 0
 local history = {}
