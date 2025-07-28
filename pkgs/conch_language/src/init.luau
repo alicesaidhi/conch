@@ -91,7 +91,7 @@ local function run(vm: LanguageVm, input: string): RunResult
 end
 
 local language: LanguageInterface = {
-	version = "0.3.0-rc.6",
+	version = "0.3.0",
 
 	create_vm = create_vm,
 

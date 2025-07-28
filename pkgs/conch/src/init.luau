@@ -197,7 +197,7 @@ end
 
 return {
 
-	version = "0.3.0-rc.6",
+	version = "0.3.0",
 
 	args = arguments,
 
