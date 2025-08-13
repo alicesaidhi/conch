@@ -337,6 +337,13 @@ function autocomplete.visit_command(state, node)
 		end
 	end
 
+	local last_argument = node.arguments[#node.arguments]
+
+	if last_argument and span_cursor(state, last_argument.span) == "after" then
+		current_argument_idx += 1
+		replace_span = vector.create(replace_span.y + 1, replace_span.y + 1, 0)
+	end
+
 	if #acceptable_overloads == 0 then
 		table.insert(state.issues, {
 			why = `no overloads match command "{command_name}"`,
@@ -348,6 +355,7 @@ function autocomplete.visit_command(state, node)
 	local suggestions: { Suggestion } = {}
 	local argument_data: AnalysisArgument?
 	local additional_data
+	local map_already_seen_text = {}
 
 	for _, overload: Overload in acceptable_overloads do
 		local argument: AnalysisArgument =
@@ -382,13 +390,13 @@ function autocomplete.visit_command(state, node)
 					and argument.suggestions(value)
 				or {}
 
-			table.move(
-				received_suggestions,
-				1,
-				#received_suggestions,
-				#suggestions + 1,
-				suggestions
-			)
+			for _, suggestion in received_suggestions do
+				local key = `{suggestion.text}:{suggestion.display}`
+				if map_already_seen_text[key] then continue end
+
+				table.insert(suggestions, suggestion)
+				map_already_seen_text[key] = true
+			end
 		end
 	end
 

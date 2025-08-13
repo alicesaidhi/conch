@@ -635,12 +635,39 @@ if ($var == 1) {
 end)
 
 --todo: write tests for analysis but im lazy
-testkit.print(
-	analysis(
-		language.create_vm(),
-		"var = true; while (true) { print $var }",
-		35
-	)
-)
+local vm = language.create_vm()
+vm.global_metadata.command = {
+	name = "command",
+	description = "test command",
+	key = "command",
+	overloads = {
+		{
+			arguments = {
+				{
+					name = "test1",
+					description = "test",
+					type = "test",
+					kind = "argument",
+					optional = false,
+					vararg = false,
+					unique_identifier = "",
+					suggestions = nil,
+				},
+
+				{
+					name = "test2",
+					description = "test",
+					type = "test",
+					kind = "argument",
+					optional = false,
+					vararg = false,
+					unique_identifier = "",
+					suggestions = nil,
+				},
+			},
+		},
+	},
+}
+testkit.print(analysis(vm, "command t ", 10))
 
 t.FINISH()
