@@ -11,13 +11,23 @@ conch.register_quick("meow", function()
 end)
 
 conch.register("test", {
-	permissions = {},
-	arguments = function() return conch.args.player() end,
+	description = nil :: string?,
+	permissions = { "command" },
+	arguments = function()
+		return conch.args.player()
+	end,
 
-	callback = function(player) end,
+	callback = function(player)
+	end :: (Player) -> ...any,
 })
 
-conch.after_command_run(function(result_context) end)
+conch.on_execution(function(who, what)
+	print("user", who, "has executed", what)
+end)
+
+conch.on_command_run((function(result_context)
+	print("user", result_context.who.name, "has executed command on server:", result_context)
+end))
 
 local function playeradded(player: Player)
 	local user = conch.get_user(player)
