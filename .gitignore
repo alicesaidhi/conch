@@ -3,6 +3,7 @@
 **/roblox_packages/
 **/packages
 **/pesde.lock
+**/node_modules/
 **/network/server.luau
 **/network/client.luau
 **/dist
