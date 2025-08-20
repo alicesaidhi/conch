@@ -1,0 +1,20 @@
+{
+	"name": "@rbxts/conch-ui",
+	"version": "0.3.1-rc.1",
+	"license": "MIT",
+	"main": "src/init.luau",
+	"types": "src/index.d.ts",
+	"files": [
+		"src"
+	],
+	"repository": "https://github.com/alicesaidhi/conch",
+	"author": "alicesaidhi",
+	"contributors": [
+		"daimond113 <contact@daimond113.com> (https://www.daimond113.com)"
+	],
+	"dependencies": {
+		"@rbxts/vide": "^0.5.7",
+		"@rbxts/conch-language": "workspace:^",
+		"@rbxts/conch": "workspace:^"
+	}
+}

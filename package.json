@@ -1,0 +1,10 @@
+{
+	"name": "conch-workspace",
+	"private": true,
+	"devDependencies": {
+		"@rbxts/compiler-types": "^2.3.0-types.2",
+		"@rbxts/types": "^1.0.768",
+		"roblox-ts": "^3.0.0",
+		"typescript": "^5.9.2"
+	}
+}
