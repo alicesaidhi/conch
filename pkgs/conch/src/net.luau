@@ -18,6 +18,7 @@ export type UpdateUserRolesPacket = { id: string, roles: { string } }
 
 export type RegisterCommandPacket = {
 	name: string,
+	description: string?,
 	permissions: { string },
 	overloads: { language.Overload },
 }

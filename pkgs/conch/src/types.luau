@@ -36,6 +36,7 @@ export type Overload = {
 
 export type CommandRepresentation = {
 	read name: string,
+	read description: string?,
 	read permissions: { string },
 	read callback: (...any) -> ...any,
 

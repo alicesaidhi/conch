@@ -96,6 +96,7 @@ local function replicate_to_player(
 
 	net.server.fire_register_command(player, {
 		name = representation.name,
+		description = representation.description,
 		permissions = representation.permissions,
 		overloads = representation.information.overloads,
 	})

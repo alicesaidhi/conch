@@ -58,6 +58,7 @@ local function register_command(data: net.RegisterCommandPacket)
 	end
 
 	console.register_command(data.name, {
+		description = data.description,
 		permissions = data.permissions,
 		arguments = function() return arguments end :: any,
 
