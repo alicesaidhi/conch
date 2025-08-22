@@ -22,7 +22,7 @@ importers:
         version: 5.9.2
 
   pkgs/conch:
-    devDependencies:
+    dependencies:
       '@rbxts/conch-language':
         specifier: workspace:^
         version: link:../conch_language
@@ -31,16 +31,15 @@ importers:
 
   pkgs/conch_ui:
     dependencies:
-      '@rbxts/vide':
-        specifier: ^0.5.7
-        version: 0.5.7
-    devDependencies:
       '@rbxts/conch':
         specifier: workspace:^
         version: link:../conch
       '@rbxts/conch-language':
         specifier: workspace:^
         version: link:../conch_language
+      '@rbxts/vide':
+        specifier: ^0.5.7
+        version: 0.5.7
 
 packages:
 

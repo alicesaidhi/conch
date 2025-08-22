@@ -316,6 +316,137 @@ local function generate_wally_release_files(path: string)
 	fs.writeFile(path .. "/wally.toml", serde.encode("toml", wally_toml, true))
 end
 
+local function link_npm_files(path: string)
+	local file = fs.readFile(path .. "/pesde.toml")
+	local pesde_toml: PesdeToml = serde.decode("toml", file)
+	if pesde_toml.private then return end
+
+	-- release on pesde first
+	process.spawn("pesde", { "publish --yes" }, {
+		cwd = path,
+		env = {},
+		shell = true,
+	})
+
+	local lib_file_path = pesde_toml.target.lib
+
+	assert(lib_file_path, "no lib file, cannot make wally release")
+	print(path .. "/" .. lib_file_path)
+	local lib_file = fs.readFile(path .. "/" .. lib_file_path)
+
+	local lib_file_src: string
+	do
+		local lib_file_path_without = string.gsub(lib_file_path, ".luau", "")
+		local init_file = {
+			`local main = require("./{lib_file_path_without:gsub("/init$", "")}")`,
+		}
+
+		table.insert(init_file, "return main")
+		lib_file_src = table.concat(init_file, "\n")
+	end
+
+	local init_file_src: string
+	do
+		local init_file = {
+			`local main = require(script.lib)`,
+		}
+
+		for value in string.gmatch(lib_file, "export type(%b  )= ") do
+			table.insert(
+				init_file,
+				`export type{value}= main.{value:gsub("=[A-z%.]-", "")}`
+			)
+		end
+
+		table.insert(init_file, "return main")
+		init_file_src = table.concat(init_file, "\n")
+	end
+
+	local roblox_packages: { [string]: string } = {}
+	do
+		local dependencies = pesde_toml.dependencies
+		if dependencies then
+			for name, dependency in dependencies do
+				local realm = dependency.target or pesde_toml.target.environment
+				if realm ~= "roblox" then continue end
+				local target = dependency.workspace or dependency.wally
+				assert(target, "could not get dependency target")
+
+				local split = string.split(target, "/")[2]
+
+				local package_file = {
+					`local TS = _G[script.Parent.src]`,
+					`return TS.import(script.Parent.src, TS.getModule(script.Parent.src, "@rbxts", "{split:gsub(
+						"_",
+						"-"
+					)}")`,
+				}
+
+				roblox_packages[name] = table.concat(package_file, "\n")
+			end
+		end
+	end
+
+	-- local luau_packages: { [string]: string } = {}
+	-- do
+	-- 	local dependencies = pesde_toml.dependencies
+	-- 	if dependencies then
+	-- 		for name, dependency in dependencies do
+	-- 			local realm = dependency.target or pesde_toml.target.environment
+	-- 			if realm ~= "luau" then continue end
+	-- 			local file =
+	-- 				fs.readFile(path .. "/luau_packages/" .. name .. ".luau")
+	-- 			local package_file = {
+	-- 				`local main = require(script.Parent.Parent.Parent["{name}"])`,
+	-- 			}
+
+	-- 			for value in string.gmatch(file, "export type (.-) = module.") do
+	-- 				local export_without_default =
+	-- 					string.gsub(value, "=.->", ">")
+	-- 				table.insert(
+	-- 					package_file,
+	-- 					`export type {value} = main.{export_without_default}`
+	-- 				)
+	-- 			end
+
+	-- 			table.insert(package_file, "return main")
+	-- 			luau_packages[name] = table.concat(package_file, "\n")
+	-- 		end
+	-- 	end
+	-- end
+
+	-- fs.removeDir(path .. "/dist")
+	-- fs.removeFile(path .. "/default.project.json")
+	-- fs.removeFile(path .. "/wally.toml")
+
+	fs.writeDir(path .. "/dist")
+	fs.writeDir(path .. "/dist/roblox_packages")
+	fs.writeDir(path .. "/dist/luau_packages")
+
+	for name, package in roblox_packages do
+		fs.writeFile(
+			path .. "/dist/roblox_packages/" .. name .. ".luau",
+			package
+		)
+	end
+
+	-- for name, package in luau_packages do
+	-- 	fs.writeFile(path .. "/dist/luau_packages/" .. name .. ".luau", package)
+	-- end
+
+	fs.copy(path .. "/src", path .. "/dist/src", true)
+	fs.writeFile(path .. "/dist/lib.luau", lib_file_src)
+	fs.writeFile(path .. "/dist/init.luau", init_file_src)
+
+	local package_name = string.split(pesde_toml.name, "/")[2]
+	fs.writeFile(
+		path .. "/default.project.json",
+		`\{\n\t"name": "{fix(package_name)}",\n\t"tree": \{\n\t\t"$path": "dist"\n\t}\n}`
+	)
+
+	-- fs.writeFile(path .. "/wally.toml", serde.encode("toml", wally_toml, true))
+end
+
 type SortItem = {
 	name: string,
 	path: string,
@@ -395,9 +526,9 @@ end
 local function cleanup_files(path: string)
 	if fs.isDir(path .. "/dist") == false then return end
 
-	fs.removeDir(path .. "/dist")
-	fs.removeFile(path .. "/wally.toml")
-	fs.removeFile(path .. "/default.project.json")
+	pcall(fs.removeDir, path .. "/dist")
+	pcall(fs.removeFile, path .. "/wally.toml")
+	pcall(fs.removeFile, path .. "/default.project.json")
 end
 
 for _, path in get_order() do
@@ -414,7 +545,15 @@ for _, path in get_order() do
 		env = {},
 		shell = true,
 	})
+	cleanup_files(path)
+	if status.ok == false then error(status.stderr) end
 
+	link_npm_files(path)
+	local status = process.spawn("pnpm", { "publish", "--access=public" }, {
+		cwd = path,
+		env = {},
+		shell = true,
+	})
 	cleanup_files(path)
 	if status.ok == false then error(status.stderr) end
 end

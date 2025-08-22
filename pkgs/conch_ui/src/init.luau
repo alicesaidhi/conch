@@ -1,10 +1,10 @@
 local Players = game:GetService "Players"
 local UserInputService = game:GetService "UserInputService"
 
-local app = require "./app"
-local conch = require "../roblox_packages/conch"
-local state = require "./state"
-local vide = require "../roblox_packages/vide"
+local app = require "@self/app"
+local conch = require "./roblox_packages/conch"
+local state = require "@self/state"
+local vide = require "./roblox_packages/vide"
 
 local mounted = false
 local opened, focused = state.opened, state.focused
