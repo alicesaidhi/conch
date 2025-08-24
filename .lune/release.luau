@@ -264,7 +264,7 @@ local function generate_wally_release_files(path: string)
 			for name, dependency in pesde_toml.dependencies do
 				if dependency.wally then
 					dependencies[name] =
-						`{string.sub(dependency.wally, 7)}@{dependency.version}`
+						`{dependency.wally}@{dependency.version}`
 				elseif dependency.name then
 					error "pesde dependency detected"
 				elseif dependency.workspace then
@@ -375,11 +375,11 @@ local function link_npm_files(path: string)
 				local split = string.split(target, "/")[2]
 
 				local package_file = {
-					`local TS = _G[script.Parent.src]`,
-					`return TS.import(script.Parent.src, TS.getModule(script.Parent.src, "@rbxts", "{split:gsub(
+					`local TS = _G[script.Parent.Parent.lib]`,
+					`return TS.import(script.Parent.Parent.lib, TS.getModule(script.Parent.Parent.lib, "@rbxts", "{split:gsub(
 						"_",
 						"-"
-					)}")`,
+					)}"))`,
 				}
 
 				roblox_packages[name] = table.concat(package_file, "\n")
@@ -539,21 +539,21 @@ end
 
 for _, path in get_order() do
 	print("Generating release for", path)
-	generate_wally_release_files(path)
-	local status = process.spawn("wally", { "publish" }, {
-		cwd = path,
-		env = {},
-		shell = true,
-	})
-	cleanup_files(path)
-	if status.ok == false then error(status.stderr) end
+	-- generate_wally_release_files(path)
+	-- local status = process.spawn("wally", { "publish" }, {
+	-- 	cwd = path,
+	-- 	env = {},
+	-- 	shell = true,
+	-- })
+	-- cleanup_files(path)
+	-- if status.ok == false then error(status.stderr) end
 
 	link_npm_files(path)
-	local status = process.spawn("pnpm", { "publish", "--access=public" }, {
-		cwd = path,
-		env = {},
-		shell = true,
-	})
-	cleanup_files(path)
-	if status.ok == false then error(status.stderr) end
+	-- local status = process.spawn("pnpm", { "publish", "--access=public" }, {
+	-- 	cwd = path,
+	-- 	env = {},
+	-- 	shell = true,
+	-- })
+	-- cleanup_files(path)
+	-- if status.ok == false then error(status.stderr) end
 end
