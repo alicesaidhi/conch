@@ -1,6 +1,6 @@
 {
 	"name": "@rbxts/conch-language",
-	"version": "0.3.1-rc.1",
+	"version": "0.3.1-rc.2",
 	"license": "MIT",
 	"main": "dist/lib.luau",
 	"types": "dist/src/index.d.ts",

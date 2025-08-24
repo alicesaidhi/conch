@@ -373,13 +373,14 @@ local function link_npm_files(path: string)
 				assert(target, "could not get dependency target")
 
 				local split = string.split(target, "/")[2]
+				local s = split:gsub("_", "-")
 
 				local package_file = {
 					`local TS = _G[script.Parent.Parent.lib]`,
-					`return TS.import(script.Parent.Parent.lib, TS.getModule(script.Parent.Parent.lib, "@rbxts", "{split:gsub(
-						"_",
-						"-"
-					)}"))`,
+					`return TS.import(script.Parent.Parent.lib, TS.getModule(script.Parent.Parent.lib, "@rbxts", "{s}").{if s
+							== "vide"
+						then "src"
+						else "dist"})`,
 				}
 
 				roblox_packages[name] = table.concat(package_file, "\n")
