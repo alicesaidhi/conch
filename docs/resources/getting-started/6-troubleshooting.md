@@ -38,7 +38,7 @@ Common issues and solutions when setting up and using Conch.
 
 2. **Verify UI package** - Make sure `conch_ui` is required and `bind_to` is called:
    ```luau
-   local ui = require(ReplicatedStorage.packages.conch_ui)
+   local ui = require(ReplicatedStorage.packages.ui)
    ui.bind_to(Enum.KeyCode.F4)
    ```
 
@@ -122,13 +122,13 @@ Common issues and solutions when setting up and using Conch.
    ReplicatedStorage/
    ├── packages/
    │   ├── conch/
-   │   └── conch_ui/
+   │   ├── ui/
    ```
 
 2. **Use correct require path**:
    ```luau
    local conch = require(ReplicatedStorage.packages.conch)
-   local ui = require(ReplicatedStorage.packages.conch_ui)
+   local ui = require(ReplicatedStorage.packages.ui)
    ```
 
 3. **Wait for packages** (if needed):

@@ -10,7 +10,7 @@ Before we begin, make sure your packages are set up correctly:
 ReplicatedStorage/
 ├── packages/
 │   ├── conch/
-│   └── conch_ui/
+│   └── ui/
 ```
 
 You'll need two scripts:
@@ -79,7 +79,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 -- Require Conch packages
 local conch = require(ReplicatedStorage.packages.conch)
-local ui = require(ReplicatedStorage.packages.conch_ui)
+local ui = require(ReplicatedStorage.packages.ui)
 
 -- Initialize the default lifecycle
 conch.initiate_default_lifecycle()
