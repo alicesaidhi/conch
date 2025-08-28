@@ -5,4 +5,4 @@ This is organized as a mono-repo, available either through pesde and Wally.
 
 [Documentation](https://alicesaidhi.github.io/conch/) [pesde](https://pesde.dev/packages/alicesaidhi/conch) [wally](https://wally.run/package/alicesaidhi/conch?version=0.2.0)
 
-Use the conch thread in the OSS discord within #projects for support [https://discord.gg/Q8nZGfrbrg]
+Use the conch thread in the [OSS discord](https://discord.gg/Q8nZGfrbrg) within #projects for support
