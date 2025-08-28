@@ -62,6 +62,7 @@ export default defineConfig({
                     { text: "Setting Up", link: "/resources/getting-started/3-setting-up" },
 					{ text: "Permissions", link: "/resources/getting-started/4-permissions" },
 					{ text: "Custom Commands", link: "/resources/getting-started/5-custom-commands" },
+					{ text: "Troubleshooting", link: "/resources/getting-started/6-troubleshooting" },
                 ] },
                 { text: "Concepts", collapsed: false, items: [
 					{ text: "Types", link: "/resources/advanced-concepts/types" },
