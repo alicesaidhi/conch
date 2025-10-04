@@ -287,6 +287,14 @@ function autocomplete.visit_expr_lambda(state, node)
 	end
 end
 
+local function safe_string(input: string)
+	if string.match(input, "[A-z@_]*") ~= input then
+		return string.format("%q", input)
+	else
+		return input
+	end
+end
+
 function autocomplete.visit_command(state, node)
 	if span_cursor(state, node.span) ~= "within" then return end
 	if span_cursor(state, node.var.span) ~= "after" then return end
@@ -380,7 +388,7 @@ function autocomplete.visit_command(state, node)
 
 		if argument and argument.kind == "literal" then
 			table.insert(suggestions, {
-				text = argument.value,
+				text = safe_string(tostring(argument.value)),
 				display = tostring(argument.value),
 			})
 		elseif argument then
@@ -394,6 +402,7 @@ function autocomplete.visit_command(state, node)
 				local key = `{suggestion.text}:{suggestion.display}`
 				if map_already_seen_text[key] then continue end
 
+				suggestion.text = safe_string(suggestion.text)
 				table.insert(suggestions, suggestion)
 				map_already_seen_text[key] = true
 			end
