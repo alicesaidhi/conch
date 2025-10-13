@@ -173,10 +173,12 @@ return function()
 		if not suggestions then return {} end
 
 		local filtered_suggestions = {}
-		local input = string.sub(
-			raw_text(),
-			analysis_result.replace.x + 1,
-			cursor_position() - 1
+		local input = string.lower(
+			string.sub(
+				raw_text(),
+				analysis_result.replace.x + 1,
+				cursor_position() - 1
+			)
 		)
 
 		input = string.gsub(input, `"(.*)"`, "%1", 1)
@@ -194,7 +196,8 @@ return function()
 				continue
 			end
 
-			local score = levenshtein_distance(input, suggestion.display)
+			local score =
+				levenshtein_distance(input, string.lower(suggestion.display))
 			if score == -math.huge then continue end
 			table.insert(
 				filtered_suggestions,
