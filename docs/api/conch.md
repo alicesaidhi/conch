@@ -93,7 +93,7 @@ Registers a type which can be replicated
     function conch.register_type<T>(
 		type: string,
 		data: {
-			converts: (any) -> T,
+			convert: (any) -> T,
 			analysis: AnalysisCommandArgument | AnalysisCommandVariadic
 		}
 	): (name: string?, description: string?) -> T

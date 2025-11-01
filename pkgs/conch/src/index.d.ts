@@ -5,6 +5,12 @@ export type Type<T = unknown> = {
 };
 export type TypeCtor<T = unknown> = (name?: string, description?: string) => Type<T>;
 
+type RegisterData<T> = {
+	convert: (from: unknown) => T,
+	analysis: AnalysisArgument
+}
+type RegisterableType<T = unknown> = Type<T> & RegisterData<T>
+
 type InferType<T extends Type> = T extends Type<infer U> ? U : never;
 type InferTypes<T extends Type[]> = {
 	[K in keyof T]: InferType<T[K]>;
@@ -133,10 +139,7 @@ export function initiate_default_lifecycle(): void;
  */
 export function register_type<T>(
 	type: string,
-	data: {
-		converts: (from: unknown) => T,
-		analysis: AnalysisArgument
-	}
+	data: RegisterData<T>
 ): TypeCtor<T>;
 /**
  * Returns if the user has the required permissions to use a command.
@@ -237,6 +240,6 @@ export namespace args {
 	export function optional<const T>(type: Type<T>): Type<T | undefined>;
 	export const opt: typeof optional;
 
-	export function enum_new<const T extends unknown[]>(options: T, name?: string, description?: string): Type<T[number]>;
-	export function enum_map<const V>(map: Record<string, V>, name?: string, description?: string): Type<V>;
+	export function enum_new<const T extends unknown[]>(options: T, name?: string, description?: string): RegisterableType<T[number]>;
+	export function enum_map<const V>(map: Record<string, V>, name?: string, description?: string): RegisterableType<V>;
 }
