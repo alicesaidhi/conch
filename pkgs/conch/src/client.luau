@@ -6,7 +6,7 @@ local language = require "../roblox_packages/language"
 local net = require "./net"
 local state = require "./state"
 local types = require "./types"
-local user = require "./user"
+local users = require "./user"
 
 local LOCALPLAYER = Players.LocalPlayer
 
@@ -14,7 +14,7 @@ local invocation_id = 0
 
 local function create_local_user(data: net.UserPacket)
 	-- print('creating new local user')
-	local self = user.create_user {
+	local self = users.create_user {
 		name = data.name,
 		player = LOCALPLAYER :: Player | false,
 	}
@@ -22,20 +22,69 @@ local function create_local_user(data: net.UserPacket)
 end
 
 local function update_user_roles(data: net.UpdateUserRolesPacket)
-	-- print('updating local user roles')
+	print("updating local user roles", data.roles)
 	local user = state.users[data.id]
 	assert(user, "local user does not exist")
 
 	user.roles = data.roles
+
+	if user ~= state.local_user then return end
+
+	for _, command in state.local_commands do
+		if
+			users.has_permissions(
+				user,
+				unpack(command.representation.permissions or {})
+			)
+		then
+			print(
+				"setting command representation for",
+				command.representation.name
+			)
+			console.set_command_from_representation(
+				command.representation,
+				command.arguments
+			)
+		else
+			print(
+				"removing command representation for",
+				command.representation.name
+			)
+			console.unset_command_from_representation(command.representation)
+		end
+	end
 end
 
 local function update_role_permissions(data: net.UpdateRolePacket)
 	-- print('updating user role permissions')
 	state.roles[data.name] = data.permissions
+
+	local user = state.local_user
+	if not user then return end
+
+	for _, command in state.local_commands do
+		if
+			users.has_permissions(
+				user,
+				unpack(command.representation.permissions or {})
+			)
+		then
+			print(
+				"setting command representation for",
+				command.representation.name
+			)
+			console.set_command_from_representation(
+				command.representation,
+				command.arguments
+			)
+		else
+			console.unset_command_from_representation(command.representation)
+		end
+	end
 end
 
 local function register_command(data: net.RegisterCommandPacket)
-	-- warn("NEW SERVER COMMAND", data.name)
+	warn("NEW SERVER COMMAND", data.name)
 	local arguments: types.Overload =
 		{ kind = "overload", overloads = data.overloads }
 

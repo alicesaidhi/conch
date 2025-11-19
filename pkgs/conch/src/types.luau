@@ -1,5 +1,10 @@
 local language = require "../roblox_packages/language"
 
+export type ArgumentType<T> = {
+	convert: ((any) -> T)?,
+	analysis: language.AnalysisArgument?,
+}
+
 export type User = {
 	read id: string,
 	read name: string,

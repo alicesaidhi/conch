@@ -5,14 +5,14 @@ local context = require "./context"
 local language = require "../roblox_packages/language"
 local types = require "./types"
 
-local function noop(v: any) return v end
+local function noop(v: unknown): any return v end
 
 local function wrap_if_not(value)
 	return if type(value) == "table" then value else { value }
 end
 
-local anyT = {
-	convert = noop :: (any) -> any,
+local anyT: types.ArgumentType<any> = {
+	convert = noop :: (unknown) -> any,
 
 	analysis = {
 		kind = "argument",
@@ -24,8 +24,8 @@ local anyT = {
 	},
 }
 
-local stringT = {
-	convert = tostring :: (string) -> string,
+local stringT: types.ArgumentType<string> = {
+	convert = tostring :: (unknown) -> string,
 
 	analysis = {
 		kind = "argument",
@@ -35,8 +35,8 @@ local stringT = {
 	},
 }
 
-local stringsT = {
-	convert = function(value)
+local stringsT: types.ArgumentType<{ string }> = {
+	convert = function(value: unknown)
 		if typeof(value) == "table" then
 			local copy = table.clone(value)
 			for k, v in copy do
@@ -56,7 +56,7 @@ local stringsT = {
 	},
 }
 
-local numberT = {
+local numberT: types.ArgumentType<number> = {
 	convert = function(input)
 		local n = tonumber(input)
 		if n == nil then error(`{input} is not a valid number`) end
@@ -71,8 +71,8 @@ local numberT = {
 	},
 }
 
-local numbersT = {
-	convert = function(input)
+local numbersT: types.ArgumentType<{ number }> = {
+	convert = function(input: unknown)
 		local input = wrap_if_not(input)
 		local copy = {}
 		for idx, value in input do
@@ -92,7 +92,7 @@ local numbersT = {
 	},
 }
 
-local booleanT = {
+local booleanT: types.ArgumentType<boolean> = {
 	convert = function(v: unknown)
 		if typeof(v) == "boolean" then
 			return v
@@ -121,7 +121,7 @@ local booleanT = {
 	},
 }
 
-local booleansT = {
+local booleansT: types.ArgumentType<{ boolean }> = {
 	convert = function(value: unknown): { boolean }
 		if typeof(value) == "table" then
 			local copy = table.clone(value) :: { [any]: any }
@@ -164,7 +164,7 @@ local booleansT = {
 	},
 }
 
-local tableT = {
+local tableT: types.ArgumentType<{ [any]: any }> = {
 	convert = noop,
 
 	analysis = {
@@ -175,7 +175,7 @@ local tableT = {
 	},
 }
 
-local function into_vector(value: vector | Vector3 | { number }): vector
+local function into_vector(value: unknown): vector
 	if type(value) == "vector" then
 		return value
 	elseif typeof(value) == "table" then
@@ -185,7 +185,7 @@ local function into_vector(value: vector | Vector3 | { number }): vector
 	end
 end
 
-local vectorT = {
+local vectorT: types.ArgumentType<vector> = {
 	convert = into_vector,
 
 	analysis = {
@@ -196,16 +196,14 @@ local vectorT = {
 		type = "vector",
 	},
 }
-local vectorsT = {
-	convert = function(
-		value: vector | Vector3 | { vector | Vector3 | { number } }
-	): { vector }
+local vectorsT: types.ArgumentType<{ vector }> = {
+	convert = function(value: unknown)
 		if type(value) == "vector" then
 			return { value }
 		elseif typeof(value) == "table" then
-			local t = {}
+			local t: { vector } = {}
 			for i, v in value do
-				t[i] = into_vector(v)
+				table.insert(t, into_vector(v))
 			end
 			return t
 		else
@@ -229,7 +227,7 @@ local function enum_map<V>(
 	map: { [string]: V },
 	name: string?,
 	description: string?
-)
+): types.ArgumentType<V>
 	return {
 		convert = function(value): V
 			local key = tostring(value)
@@ -258,7 +256,11 @@ end
 --[=[
 Generates a new enum that can be passed to conch.register_type
 ]=]
-local function enum_new<T>(options: { T }, name: string?, description: string?)
+local function enum_new<T>(
+	options: { T },
+	name: string?,
+	description: string?
+): types.ArgumentType<T>
 	local map = {}
 
 	for _, value in options do
@@ -268,9 +270,7 @@ local function enum_new<T>(options: { T }, name: string?, description: string?)
 	return enum_map(map, name, description)
 end
 
-local function convert_arg_to_player(
-	arg: string | number | "@s" | Player
-): Player
+local function convert_arg_to_player(arg: unknown): Player
 	local ctx = context.get_command_context()
 	if arg == "@s" then
 		return ctx and ctx.executor.player or error "not executed by a player"
@@ -293,9 +293,7 @@ local function convert_arg_to_player(
 	end
 end
 
-local function convert_arg_to_players(
-	arg: string | number | "@s" | "@a" | { any } | Player
-)
+local function convert_arg_to_players(arg: unknown)
 	if arg == "@a" then
 		return Players:GetPlayers()
 	elseif typeof(arg) == "table" then
@@ -311,7 +309,7 @@ local function convert_arg_to_players(
 	end
 end
 
-local playerT = {
+local playerT: types.ArgumentType<Player> = {
 	convert = function(player) return convert_arg_to_player(player) end,
 
 	analysis = {
@@ -323,6 +321,11 @@ local playerT = {
 		suggestions = function()
 			local suggestions = {}
 
+			table.insert(suggestions, {
+				text = "@s",
+				display = "@s (self)",
+			})
+
 			for _, player in Players:GetPlayers() do
 				table.insert(suggestions, {
 					text = player.Name,
@@ -335,7 +338,7 @@ local playerT = {
 	},
 }
 
-local playersT = {
+local playersT: types.ArgumentType<{ Player }> = {
 	convert = function(players) return convert_arg_to_players(players) end,
 
 	analysis = {
@@ -347,6 +350,15 @@ local playersT = {
 		suggestions = function(text: string)
 			local suggestions = {}
 
+			table.insert(suggestions, {
+				text = "@a",
+				display = "@a (all)",
+			})
+			table.insert(suggestions, {
+				text = "@s",
+				display = "@s (self)",
+			})
+
 			for _, player in Players:GetPlayers() do
 				table.insert(suggestions, {
 					text = player.Name,
@@ -359,9 +371,7 @@ local playersT = {
 	},
 }
 
-local function convert_arg_to_userid(
-	arg: string | number | Player | "@s"
-): number
+local function convert_arg_to_userid(arg: unknown): number
 	local ctx = context.get_command_context()
 	if arg == "@s" then
 		return ctx and ctx.executor.player and ctx.executor.player.UserId
@@ -403,9 +413,7 @@ local function convert_arg_to_userid(
 	end
 end
 
-local function convert_arg_to_userids(
-	arg: string | number | "@s" | "@a" | { any }
-)
+local function convert_arg_to_userids(arg: unknown)
 	if arg == "@a" then arg = Players:GetPlayers() :: any end
 
 	if typeof(arg) == "table" then
@@ -421,7 +429,7 @@ local function convert_arg_to_userids(
 	end
 end
 
-local useridT = {
+local useridT: types.ArgumentType<number> = {
 	convert = function(player) return convert_arg_to_userid(player) end,
 
 	analysis = {
@@ -433,6 +441,11 @@ local useridT = {
 		suggestions = function()
 			local suggestions = {}
 
+			table.insert(suggestions, {
+				text = "@s",
+				display = "@s (self)",
+			})
+
 			for _, player in Players:GetPlayers() do
 				table.insert(suggestions, {
 					text = player.Name,
@@ -445,7 +458,7 @@ local useridT = {
 	},
 }
 
-local useridsT = {
+local useridsT: types.ArgumentType<{ number }> = {
 	convert = function(players) return convert_arg_to_userids(players) end,
 
 	analysis = {
@@ -457,6 +470,15 @@ local useridsT = {
 		suggestions = function()
 			local suggestions = {}
 
+			table.insert(suggestions, {
+				text = "@s",
+				display = "@s (self)",
+			})
+			table.insert(suggestions, {
+				text = "@a",
+				display = "@a (all)",
+			})
+
 			for _, player in Players:GetPlayers() do
 				table.insert(suggestions, {
 					text = player.Name,
@@ -469,8 +491,8 @@ local useridsT = {
 	},
 }
 
-local color3T = {
-	convert = function(color: Color3 | string | vector): Color3
+local color3T: types.ArgumentType<Color3> = {
+	convert = function(color: unknown): Color3
 		return if typeof(color) == "Color3"
 			then color
 			elseif typeof(color) == "string" then Color3.fromHex(color)
@@ -491,10 +513,8 @@ local color3T = {
 	},
 }
 
-local color3sT = {
-	convert = function(
-		color: Color3 | string | vector | { Color3 | string | vector }
-	): { Color3 }
+local color3sT: types.ArgumentType<{ Color3 }> = {
+	convert = function(color: unknown): { Color3 }
 		return if typeof(color) == "Color3"
 			then color
 			elseif typeof(color) == "string" then Color3.fromHex(color)
@@ -504,21 +524,23 @@ local color3sT = {
 				color.z
 			)
 			elseif typeof(color) == "table" then (function()
-				local t = {}
+				local t: { Color3 } = {}
 
 				for idx, v in color do
-					t[idx] = if typeof(v) == "Color3"
+					local value = if typeof(v) == "Color3"
 						then color
 						elseif typeof(v) == "string" then Color3.fromHex(v)
-						elseif type(v) == "vector" then Color3.fromRGB(
-							v.x,
-							v.y,
-							v.z
+						elseif typeof(v) == "Vector3" then Color3.fromRGB(
+							v.X,
+							v.Y,
+							v.Z
 						)
 						else error(
 							`cannot convert {typeof(color)} into color3`,
 							0
 						)
+
+					table.insert(t, value)
 				end
 
 				return t
@@ -571,7 +593,9 @@ local DURATION_TIMES: { [string]: number } = {
 	years = 60 * 60 * 24 * 365,
 }
 
-local function parse_duration(text: string)
+local function parse_duration(text: unknown)
+	if typeof(text) ~= "string" then error "cannot parse non string" end
+
 	local words = string.split(text, " ")
 	local n = 0
 
@@ -597,8 +621,8 @@ local function parse_duration(text: string)
 	return n
 end
 
-local durationT = {
-	convert = function(n: number | string): number
+local durationT: types.ArgumentType<number> = {
+	convert = function(n: unknown): number
 		return if typeof(n) == "number" then n else parse_duration(n)
 	end,
 
@@ -695,7 +719,7 @@ return {
 	overload = overload,
 	literal = literal,
 
-	any = console.register_type("any", anyT) :: G<any>,
+	any = console.register_type("any", anyT),
 	string = console.register_type("string", stringT) :: G<string>,
 	strings = console.register_type("strings", stringsT) :: G<{ string }>,
 	number = console.register_type("number", numberT) :: G<number>,

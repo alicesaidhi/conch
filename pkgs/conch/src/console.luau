@@ -24,11 +24,8 @@ local types = {}
 
 local function register_type<T>(
 	type: string,
-	data: {
-		convert: ((any) -> T)?,
-		analysis: language.AnalysisArgument?,
-	}
-)
+	data: types.ArgumentType<T>
+): (name: string?, description: string?) -> T
 	types[type] = data
 
 	if data.analysis then
@@ -157,32 +154,13 @@ local function determine_overload(overloads: { language.Overload }, ...: any)
 	return acceptable_overloads[1]
 end
 
-local function register_command<T...>(
-	name: string,
-	info: {
-		permissions: { types.Permission },
-		description: string?,
-		arguments: () -> T...,
-		callback: (T...) -> ...any,
+local function compute_overloads(
+	description: string,
+	arguments: {
+		language.AnalysisArgument
+		| types.Overload
 	}
 )
-	local arguments: { language.AnalysisArgument | types.Overload } = (
-		{ info.arguments() }
-		or {
-			{
-				kind = "argument",
-				name = "...",
-				description = "unspecified",
-
-				suggestions = function() return {} end,
-
-				type = "any",
-				optional = false,
-				vararg = true,
-			},
-		}
-	) :: any
-
 	local map_overload_convert: { [language.Overload]: { (any) -> any } } = {}
 	local overloads: { language.Overload } = {}
 
@@ -256,13 +234,125 @@ local function register_command<T...>(
 		end
 
 		local overload = {
-			description = info.description,
+			description = description,
 			arguments = analysis_arguments,
 		}
 
 		table.insert(overloads, overload)
 		map_overload_convert[overload] = overload_converts
 	end
+
+	return map_overload_convert, overloads
+end
+
+local map_remove_info: { [types.CommandRepresentation]: () -> () } = {}
+local function set_command_from_representation(
+	info: types.CommandRepresentation,
+	arguments: {
+		language.AnalysisArgument
+		| types.Overload
+	}
+)
+	if map_remove_info[info] then return end
+
+	local map_overload_convert, overloads =
+		compute_overloads(info.description or "", arguments)
+
+	write_global(info.name, function(...)
+		-- determine which overload is the correct one
+		local overload = determine_overload(overloads, ...)
+		if not overload then error "could not match with an overload" end
+
+		local custom = { ... }
+
+		local variadic, last_index
+		local converts = map_overload_convert[overload]
+		for idx, argument in overload.arguments do
+			if argument.kind == "argument" and argument.vararg then
+				variadic = converts[idx]
+				last_index = idx
+				break
+			elseif argument.optional and select(idx, ...) == nil then
+				custom[idx] = nil
+			elseif converts[idx] then
+				custom[idx] = converts[idx]((select(idx, ...)))
+			else
+				custom[idx] = select(idx, ...)
+			end
+		end
+
+		if variadic and last_index then
+			for idx = last_index + 1, select("#", ...) do
+				custom[idx] = variadic((select(idx, ...)))
+			end
+		end
+
+		local results =
+			{ pcall(info.callback, unpack(custom, 1, select("#", ...))) }
+		local ok = table.remove(results, 1)
+
+		local context = state.command_context[coroutine.running()]
+
+		after_run:fire {
+			ok = ok,
+			who = context and context.executor,
+			command = info.name,
+			arguments = custom,
+			result = results,
+		}
+
+		if not ok then error(results[2], 0) end
+
+		return unpack(results)
+	end)
+
+	commands[info.name] = info
+	map_remove_info[info] = language.attach_info(vm, {
+		name = info.name,
+		description = info.description or "",
+		key = info.name,
+		is_var = false,
+
+		overloads = overloads,
+	})
+end
+
+local function unregister_command(info: types.CommandRepresentation)
+	if not map_remove_info[info] then return end
+
+	commands[info.name] = nil
+	map_remove_info[info].remove()
+	map_remove_info[info] = nil
+	write_global(info.name, nil)
+end
+
+local function register_command<T...>(
+	name: string,
+	info: {
+		permissions: { types.Permission },
+		description: string?,
+		arguments: () -> T...,
+		callback: (T...) -> ...any,
+	}
+)
+	local arguments: { language.AnalysisArgument | types.Overload } = (
+		{ info.arguments() }
+		or {
+			{
+				kind = "argument",
+				name = "...",
+				description = "unspecified",
+
+				suggestions = function() return {} end,
+
+				type = "any",
+				optional = false,
+				vararg = true,
+			},
+		}
+	) :: any
+
+	local _, overloads = compute_overloads(info.description or "", arguments)
 
 	local representation: types.CommandRepresentation = {
 		name = name,
@@ -280,73 +370,27 @@ local function register_command<T...>(
 		dirty_replicate = true,
 	}
 
-	commands[name] = representation
-
-	if not IS_SERVER then
-		write_global(name, function(...)
-			-- determine which overload is the correct one
-			local overload = determine_overload(overloads, ...)
-			if not overload then error "could not match with an overload" end
-
-			local custom = { ... }
-
-			local variadic, last_index
-			local converts = map_overload_convert[overload]
-			for idx, argument in overload.arguments do
-				if argument.kind == "argument" and argument.vararg then
-					variadic = converts[idx]
-					last_index = idx
-					break
-				elseif argument.optional and select(idx, ...) == nil then
-					custom[idx] = nil
-				elseif converts[idx] then
-					custom[idx] = converts[idx]((select(idx, ...)))
-				else
-					custom[idx] = select(idx, ...)
-				end
-			end
-
-			if variadic and last_index then
-				for idx = last_index + 1, select("#", ...) do
-					custom[idx] = variadic((select(idx, ...)))
-				end
-			end
-
-			local results =
-				{ pcall(info.callback, unpack(custom, 1, select("#", ...))) }
-			local ok = table.remove(results, 1)
-
-			local context = state.command_context[coroutine.running()]
-
-			after_run:fire {
-				ok = ok,
-				who = context and context.executor,
-				command = name,
-				arguments = custom,
-				result = results,
-			}
-
-			if not ok then error(results[2], 0) end
-
-			return unpack(results)
-		end)
-	end
-
 	if IS_SERVER then
 		for _, player in Players:GetPlayers() do
 			-- print("replicating to player", player)
 			replicate_to_player(player, representation)
 		end
+		commands[name] = representation
 	end
 
-	language.attach_info(vm, {
-		name = name,
-		description = info.description or "",
-		key = name,
-		is_var = false,
+	if not IS_SERVER then
+		if
+			state.local_user
+			and user.has_permissions(state.local_user, unpack(info.permissions))
+		then
+			set_command_from_representation(representation, arguments)
+		end
 
-		overloads = overloads,
-	})
+		state.local_commands[name] = {
+			representation = representation,
+			arguments = arguments,
+		}
+	end
 
 	return representation
 end
@@ -376,4 +420,7 @@ return {
 
 	register_type = register_type,
 	get_type = get_type,
+
+	set_command_from_representation = set_command_from_representation,
+	unset_command_from_representation = unregister_command,
 }

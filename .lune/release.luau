@@ -549,12 +549,12 @@ for _, path in get_order() do
 	-- cleanup_files(path)
 	-- if status.ok == false then error(status.stderr) end
 
-	link_npm_files(path)
+	-- link_npm_files(path)
 	-- local status = process.spawn("pnpm", { "publish", "--access=public" }, {
 	-- 	cwd = path,
 	-- 	env = {},
 	-- 	shell = true,
 	-- })
-	-- cleanup_files(path)
+	cleanup_files(path)
 	-- if status.ok == false then error(status.stderr) end
 end

@@ -1,3 +1,4 @@
+local language = require "../roblox_packages/language"
 local types = require "./types"
 
 return {
@@ -12,6 +13,14 @@ return {
 	users = {} :: { [string]: types.User },
 	--- Stores the executing command for each thread, and information about it.
 	command_context = {} :: { [thread]: types.CommandContext },
+	--- Stores all local commands
+	local_commands = {} :: {
+		[string]: {
+			representation: types.CommandRepresentation,
+			arguments: { language.AnalysisArgument | types.Overload },
+		},
+	},
+
 	--- Stores a continuation for a u32.
 	continuations = {} :: { [number]: thread },
 }
