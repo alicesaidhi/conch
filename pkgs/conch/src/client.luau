@@ -22,7 +22,7 @@ local function create_local_user(data: net.UserPacket)
 end
 
 local function update_user_roles(data: net.UpdateUserRolesPacket)
-	print("updating local user roles", data.roles)
+	-- print("updating local user roles", data.roles)
 	local user = state.users[data.id]
 	assert(user, "local user does not exist")
 
@@ -37,19 +37,19 @@ local function update_user_roles(data: net.UpdateUserRolesPacket)
 				unpack(command.representation.permissions or {})
 			)
 		then
-			print(
-				"setting command representation for",
-				command.representation.name
-			)
+			-- print(
+			-- 	"setting command representation for",
+			-- 	command.representation.name
+			-- )
 			console.set_command_from_representation(
 				command.representation,
 				command.arguments
 			)
 		else
-			print(
-				"removing command representation for",
-				command.representation.name
-			)
+			-- print(
+			-- 	"removing command representation for",
+			-- 	command.representation.name
+			-- )
 			console.unset_command_from_representation(command.representation)
 		end
 	end
@@ -84,7 +84,7 @@ local function update_role_permissions(data: net.UpdateRolePacket)
 end
 
 local function register_command(data: net.RegisterCommandPacket)
-	warn("NEW SERVER COMMAND", data.name)
+	-- warn("NEW SERVER COMMAND", data.name)
 	local arguments: types.Overload =
 		{ kind = "overload", overloads = data.overloads }
 
