@@ -726,10 +726,6 @@ local function visit_stat_assign(
 	local key = node.identifier.text
 	local value = evaluate_expression(state, node.value)
 
-	if typeof(value) and conch_functions[value] then
-		conch_functions[value] = key
-	end
-
 	write_variable(state, key, value)
 	return nil
 end
@@ -765,12 +761,14 @@ local function visit_lstat(state: ExecutionState, node: ast.LastStatement)
 	state.last_statement = { node = node, scope = state.scope }
 end
 
-function visit_block(state: ExecutionState, node: ast.Block)
-	state.scope = {
-		up = state.scope,
-		root = false :: false,
-		vars = {},
-	}
+function visit_block(state: ExecutionState, node: ast.Block, inherit: boolean?)
+	if inherit ~= true then
+		state.scope = {
+			up = state.scope,
+			root = false :: false,
+			vars = {},
+		}
+	end
 
 	for _, stat in node.body do
 		if stat.kind == "assign" then
@@ -810,7 +808,7 @@ local function create_state(): ExecutionState
 end
 
 local function execute(state: ExecutionState, ast: ast.Ast): ExecutionResult
-	local ok, err = pcall(visit_block, state, ast.block)
+	local ok, err = pcall(visit_block, state, ast.block, true)
 
 	if not ok then
 		reset_state(state)

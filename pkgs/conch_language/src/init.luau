@@ -68,7 +68,7 @@ local function run(vm: LanguageVm, input: string): RunResult
 	local b = buffer.fromstring(input)
 	local ok, output: ast.Output = pcall(ast.parse, b)
 
-	if not ok then
+	if not ok or not output.result then
 		local why = {}
 
 		for _, issue in output.issues do
