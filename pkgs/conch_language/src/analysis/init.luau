@@ -249,6 +249,7 @@ function autocomplete.visit_var_root(state, node)
 	elseif node.kind == "name" then
 		for var in state.vars do
 			table.insert(suggestions, {
+				kind = "variable",
 				text = `${var}`,
 				display = `${var}`,
 			})
