@@ -108,9 +108,9 @@ return component(function(
 
 						order = idx,
 						
-						color = Color3.fromHex("ffffff"),
+						color = theme.select_color "crust",
 						transparency = function()
-							return if idx == p.selected() then 0.8 else 1
+							return if idx == p.selected() then 0 else 1
 						end,
 
 						text {
@@ -120,6 +120,9 @@ return component(function(
 
 							size = 16,
 							xalign = "left",
+							color = function()
+								return if idx == p.selected() then theme.select_color("text")() else  theme.select_color("subtext1")()
+							end,
 							text = function() return suggestion().display end
 						}
 					}

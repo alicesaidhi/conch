@@ -49,7 +49,7 @@ return component(function(
 		BackgroundTransparency = 1,
 
 		Text = p.text,
-		TextColor3 = p.color or Color3.fromHex "fdfdfd",
+		TextColor3 = p.color or theme.text,
 		TextTransparency = p.transparency,
 		TextSize = function() return math.round(read(p.size) or 24) end,
 		TextTruncate = if p.truncate == "split"
@@ -75,7 +75,7 @@ return component(function(
 			local font = read(p.font or theme.font) :: Font
 			return Font.new(
 				font.Family,
-				find_weight(read(p.weight or 400)),
+				find_weight(read(p.weight or 500)),
 				if read(p.italic) then Enum.FontStyle.Italic else font.Style
 			)
 		end,

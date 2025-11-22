@@ -62,7 +62,8 @@ return component(function(
 		BackgroundTransparency = 1,
 
 		Text = p.text,
-		TextColor3 = p.color or Color3.fromHex "fdfdfd",
+		TextColor3 = p.color or theme.text,
+		PlaceholderColor3 = theme.select_color "subtext1",
 		TextTransparency = p.transparency,
 		PlaceholderText = p.placeholder,
 		TextSize = function() return math.round(read(p.size or 16)) end,
@@ -87,7 +88,7 @@ return component(function(
 			local font = read(p.font or theme.font) :: Font
 			return Font.new(
 				font.Family,
-				find_weight(read(p.weight or 400)),
+				find_weight(read(p.weight or 500)),
 				if read(p.italic) then Enum.FontStyle.Italic else font.Style
 			)
 		end,

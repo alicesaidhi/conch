@@ -19,6 +19,7 @@ export type Overload = {
 }
 
 export type Suggestion = {
+	read kind: "variable"?,
 	read text: string,
 	read display: string,
 }
@@ -177,11 +178,11 @@ local function is_identifier(input: string)
 	end
 end
 
-local function wrap_if_necessary(input: string)
-	if is_identifier(input) then
-		return input
+local function wrap_if_necessary(input: Suggestion)
+	if is_identifier(input.text) or input.kind == "variable" then
+		return input.text
 	else
-		return string.format("%q", input)
+		return string.format("%q", input.text)
 	end
 end
 
@@ -457,7 +458,7 @@ return function(
 
 	if input.result and input.result.suggestions then
 		for idx, suggestion in input.result.suggestions do
-			(suggestion :: any).text = wrap_if_necessary(suggestion.text)
+			(suggestion :: any).text = wrap_if_necessary(suggestion)
 		end
 	end
 

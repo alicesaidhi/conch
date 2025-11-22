@@ -63,7 +63,7 @@ type SpecialProperties = {
 	--- the layout order
 	order: Can<number>?,
 	--- the anchor point
-	anchor: Array<number>?,
+	anchor: Can<Array<number>>?,
 	--- is it visible
 	visible: (() -> boolean)?,
 	-- padding properties

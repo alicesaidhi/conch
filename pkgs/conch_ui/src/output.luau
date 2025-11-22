@@ -1,3 +1,4 @@
+local theme = require "./theme"
 export type Color = {
 	kind: "color",
 	color: Color3,
@@ -101,23 +102,7 @@ local ESCAPE_LIST = {
 	[char "&"] = buffer.fromstring "&amp;",
 }
 
-local COLOR_PALETTE = {
-	[0] = Color3.fromHex "000000",
-	[1] = Color3.fromHex "b00000",
-	[2] = Color3.fromHex "00b000",
-	[3] = Color3.fromHex "b0b000",
-	[4] = Color3.fromHex "0000b0",
-	[5] = Color3.fromHex "b000b0",
-	[6] = Color3.fromHex "00b0b0",
-	[7] = Color3.fromHex "eeeeee",
-	[8] = Color3.fromHex "ff0000",
-	[9] = Color3.fromHex "00ff00",
-	[11] = Color3.fromHex "ffff00",
-	[12] = Color3.fromHex "0000ff",
-	[13] = Color3.fromHex "ff00ff",
-	[14] = Color3.fromHex "00ffff",
-	[15] = Color3.fromHex "ffffff",
-}
+local COLOR_PALETTE = theme.ansi_pallete
 
 local MAX_SIZE = 24_000_000
 local DELETE_SIZE = 1_000_000
@@ -346,7 +331,13 @@ local function write(self: Stream, input: buffer)
 				elseif current == "39" then
 					append_tag {
 						kind = "color",
-						color = COLOR_PALETTE[8],
+						color = COLOR_PALETTE[9],
+						line = #self.richtext_lines,
+					}
+				elseif current == "310" then
+					append_tag {
+						kind = "color",
+						color = COLOR_PALETTE[10],
 						line = #self.richtext_lines,
 					}
 				elseif current == "311" then
@@ -436,7 +427,13 @@ local function write(self: Stream, input: buffer)
 				elseif current == "49" then
 					append_tag {
 						kind = "bgcolor",
-						color = COLOR_PALETTE[8],
+						color = COLOR_PALETTE[9],
+						line = #self.richtext_lines,
+					}
+				elseif current == "410" then
+					append_tag {
+						kind = "bgcolor",
+						color = COLOR_PALETTE[10],
 						line = #self.richtext_lines,
 					}
 				elseif current == "411" then

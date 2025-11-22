@@ -23,11 +23,11 @@ return function()
 	local function output(value: conch.Log)
 		if state.logs.at > 0 then state.logs:write(NEWLINE) end
 		if value.kind == "error" then
-			value.text = `\27[1;48;30mERR\27[0;38m {value.text}\27[0m`
+			value.text = `\27[1;48;310mERR\27[0;38m {value.text}\27[0m`
 		elseif value.kind == "warn" then
-			value.text = `\27[1;43;30mWRN\27[0;33m {value.text}\27[0m`
+			value.text = `\27[1;43;310mWRN\27[0;33m {value.text}\27[0m`
 		elseif value.kind == "info" then
-			value.text = `\27[1;46;30mINF\27[0;36m {value.text}\27[0m`
+			value.text = `\27[1;46;310mINF\27[0;36m {value.text}\27[0m`
 		end
 
 		state.logs:write(buffer.fromstring(value.text))
