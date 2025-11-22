@@ -130,7 +130,7 @@ export type AnalysisCommandArgument = {
 
 ```lua
 conch.register_type("custom", {
-	converts = function(value: unknown) -- this function handles implicit converts. it converts the given value into another value and is only fed into the function.
+	convert = function(value: unknown) -- this function handles implicit converts. it converts the given value into another value and is only fed into the function.
 		return "new value!"
 	end,
 
