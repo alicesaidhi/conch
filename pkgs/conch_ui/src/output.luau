@@ -499,6 +499,10 @@ local function write(self: Stream, input: buffer)
 			if c ~= NEWLINE then
 				chars_left -= 1
 			end
+
+			if c == char "\t" then
+				chars_left = math.floor(chars_left / 4) * 4
+			end
 		end
 	end
 

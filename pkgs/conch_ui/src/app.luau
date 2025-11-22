@@ -51,6 +51,22 @@ return function()
 		callback = function() state.logs {} end,
 	})
 
+	conch.register("ansi", {
+		description = "Displays all possible ANSI colors",
+		permissions = {},
+		arguments = function() end,
+		callback = function()
+			local args = {}
+
+			for i = 0, 15 do
+				table.insert(args, `\27[4{i}m{i}\t`)
+			end
+
+			output { kind = "normal", text = "Regular ansi colors" }
+			output { kind = "normal", text = table.concat(args) }
+		end,
+	})
+
 	conch.register("close-ui", {
 		description = "Close the CLI",
 		permissions = {},

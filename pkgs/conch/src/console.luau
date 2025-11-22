@@ -118,6 +118,7 @@ local function execute(text: string)
 				console.output { kind = "normal", text = tostring(value) }
 			end
 		else
+			warn(table.concat(result.why, "\n"))
 			console.output {
 				kind = "error",
 				text = table.concat(result.why, "\n"),
@@ -325,7 +326,10 @@ local function set_command_from_representation(
 			result = results,
 		}
 
-		if not ok then error(results[2], 0) end
+		if not ok then
+			warn(unpack(results))
+			error(results[2], 0)
+		end
 
 		return unpack(results)
 	end)
