@@ -13,6 +13,7 @@ local user = require "@self/user"
 
 export type Log = types.Log
 export type CommandContext = types.CommandContext
+export type Stream = types.Stream
 
 local IS_SERVER = RunService:IsServer()
 local IS_CLIENT = RunService:IsClient()
@@ -197,7 +198,7 @@ end
 
 return {
 
-	version = "0.3.1",
+	version = "0.4.0",
 
 	args = arguments,
 
@@ -213,6 +214,8 @@ return {
 		if not ok then console.console.output { kind = "error", text = err } end
 		pop()
 	end,
+
+	cancel = console.cancel,
 
 	register_quick = console.register_quick,
 	register = console.register_command,

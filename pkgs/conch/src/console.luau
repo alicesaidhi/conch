@@ -99,25 +99,49 @@ local function replicate_to_player(
 	})
 end
 
-local busy = false
+local suspended_thread: thread?
+local running_thread: thread?
 
 local function execute(text: string)
-	assert(not busy, "already executing!")
+	assert(suspended_thread == nil, "thread is already running!")
+	suspended_thread = coroutine.running()
 
 	console.output { kind = "info", text = `> {text}` }
-	busy = true
 
-	local result = language.run(vm, text)
+	local finished = false
+	task.spawn(function()
+		running_thread = coroutine.running()
+		local result = language.run(vm, text)
 
-	if result.ok then
-		for _, value in result.values or {} :: never do
-			console.output { kind = "normal", text = tostring(value) }
+		if result.ok then
+			for _, value in result.values or {} :: never do
+				console.output { kind = "normal", text = tostring(value) }
+			end
+		else
+			console.output {
+				kind = "error",
+				text = table.concat(result.why, "\n"),
+			}
 		end
-	else
-		console.output { kind = "error", text = table.concat(result.why, "\n") }
-	end
 
-	busy = false
+		if suspended_thread then coroutine.resume(suspended_thread) end
+		finished = true
+	end)
+
+	if not finished then coroutine.yield() end
+
+	running_thread = nil
+	suspended_thread = nil
+end
+
+local function cancel()
+	if suspended_thread and running_thread then
+		task.cancel(running_thread)
+		coroutine.resume(suspended_thread)
+
+		running_thread = nil
+		suspended_thread = nil
+	end
 end
 
 local function determine_overload(overloads: { language.Overload }, ...: any)
@@ -414,6 +438,7 @@ return {
 	register_command = register_command,
 	replicate_to_player = replicate_to_player,
 	execute = execute,
+	cancel = cancel,
 	analyze = analyze,
 	write_global = write_global,
 	after_command_run = after_run,

@@ -39,6 +39,8 @@ local function has_permissions(user: types.User, ...: types.Permission)
 	-- print("checking if", user.name, "with roles", user.roles, "has permission to run", ...)
 	local permissions_necessary = { ... }
 
+	if #permissions_necessary == 0 then return true end
+
 	for _, role in user.roles do
 		if constants.ADMIN_ROLE == role then return true end
 		local permissions = state.roles[role]

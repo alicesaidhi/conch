@@ -1,48 +1,36 @@
 --!nonstrict
-local TextService = game:GetService "TextService"
-local UserInputService = game:GetService "UserInputService"
-
-local background = require "./components/background"
 local conch = require "../roblox_packages/conch"
-local corner = require "./components/corner"
-local flex = require "./components/flex"
-local gap = require "./components/gap"
+local console_output = require "./components/ui/console_output"
+local container = require "./components/core/container"
+local executor = require "./components/ui/executor"
 local language = require "../roblox_packages/language"
 local levenshtein_distance = require "./levenshtein_distance"
-local loading = require "./components/loading"
-local padding = require "./components/padding"
-local screen = require "./components/screen"
+local screen = require "./components/core/screen"
 local state = require "./state"
-local suggestion = require "./components/suggestion"
-local text = require "./components/text"
-local textbox = require "./components/textbox"
-local theme = require "./theme"
 local vide = require "../roblox_packages/vide"
 
 local source = vide.source
 local derive = vide.derive
-local show = vide.show
-local changed = vide.changed
 local effect = vide.effect
-local cleanup = vide.cleanup
-local indexes = vide.indexes
 
 local STARTUP_TEXT = `\z
-conch-ui 0.3.1\tconch-language {language.version}\tconch {language.version}`
+conch-ui 0.4.0\tconch-language {language.version}\tconch {conch.version}`
 
-local history_n = 0
-local history = {}
+local NEWLINE = buffer.create(1)
+buffer.writeu8(NEWLINE, 0, string.byte "\n")
 
 return function()
-	local function output(values)
-		local s = string.split(values.text, "\n")
-
-		for idx, log in s do
-			local logs = state.logs()
-			table.insert(logs, 1, { kind = values.kind, text = log })
-			table.remove(logs, 100)
-			state.logs(logs)
+	local function output(value: conch.Log)
+		if state.logs.at > 0 then state.logs:write(NEWLINE) end
+		if value.kind == "error" then
+			value.text = `\27[1;48;30mERR\27[0;38m {value.text}\27[0m`
+		elseif value.kind == "warn" then
+			value.text = `\27[1;43;30mWRN\27[0;33m {value.text}\27[0m`
+		elseif value.kind == "info" then
+			value.text = `\27[1;46;30mINF\27[0;36m {value.text}\27[0m`
 		end
+
+		state.logs:write(buffer.fromstring(value.text))
 	end
 
 	conch.console.output = output
@@ -76,22 +64,8 @@ return function()
 	local raw_text = source ""
 	local working = source(false)
 	local cursor_position = source(0)
-	local absolute_position = source(Vector2.zero)
 
 	local analysis = source(conch.analyze("", 0))
-	local selected_suggestion = source(1)
-
-	effect(
-		function()
-			selected_suggestion(
-				math.clamp(
-					selected_suggestion(),
-					1,
-					math.max(1, #analysis().suggestions)
-				)
-			)
-		end
-	)
 
 	local deferred = false
 	effect(function()
@@ -105,67 +79,6 @@ return function()
 			analysis(conch.analyze(raw_text(), cursor_position() - 1))
 		end)
 	end)
-
-	local before_text = derive(
-		function() return string.sub(raw_text(), 1, cursor_position() - 1) end
-	)
-
-	local suggestion_position = source(vector.zero)
-
-	local bounds = Instance.new "GetTextBoundsParams"
-	bounds.Font = theme.font()
-	bounds.RichText = false
-	bounds.Size = 20
-	bounds.Width = 100000
-
-	effect(function()
-		local t = before_text()
-		bounds.Text = t
-		task.spawn(function()
-			local s = TextService:GetTextBoundsAsync(bounds)
-			if t ~= before_text() then return end
-			suggestion_position(s)
-		end)
-	end)
-
-	local function autofill(text: string, span: vector, with: string)
-		local before = string.sub(text, 1, span.x)
-		local after = string.sub(text, span.y + 1, -1)
-
-		task.defer(cursor_position, span.x + #with + 2)
-		return before .. with .. " " .. after
-	end
-
-	cleanup(UserInputService.InputBegan:Connect(function(input)
-		local analysis_result = analysis()
-
-		if input.KeyCode == Enum.KeyCode.Down then
-			if #analysis_result.suggestions == 0 then
-				if history_n == 0 then history[history_n] = raw_text() end
-
-				history_n = math.clamp(history_n - 1, 0, #history)
-				raw_text(history[history_n] or "")
-				cursor_position(#raw_text() + 1)
-			else
-				selected_suggestion(
-					math.min(
-						selected_suggestion() + 1,
-						#analysis_result.suggestions
-					)
-				)
-			end
-		elseif input.KeyCode == Enum.KeyCode.Up then
-			if #analysis_result.suggestions == 0 then
-				if history_n == 0 then history[history_n] = raw_text() end
-
-				history_n = math.clamp(history_n + 1, 0, #history)
-				raw_text(history[history_n] or "")
-				cursor_position(#raw_text() + 1)
-			else
-				selected_suggestion(math.max(1, selected_suggestion() - 1))
-			end
-		end
-	end))
 
 	local filtered_suggestions = derive(function()
 		local analysis_result = analysis()
@@ -219,159 +132,65 @@ return function()
 		return new_suggestions
 	end)
 
-	local next_cursor_position: false | number = false
 	return screen {
 		name = "Command Executor",
 		display_order = 100_000,
 		enabled = state.opened,
 
-		flex():fill("horizontal"):vertical "bottom",
-		padding { padding = 12 },
+		container {
+			ws = 1,
+			hs = 1,
 
-		show(analysis, function()
-			return vide.create "Folder" {
-				suggestion {
-					x = function()
-						local t = string.split(before_text(), "\n")
-						return 10 * #t[#t] + 10
-					end,
-					y = function()
-						return suggestion_position().Y
-							+ absolute_position().Y
-							- 20
-					end,
-					selected = selected_suggestion,
+			flex = { justify = "fill", align = state.alignment },
+			pad = { p = 12 },
 
-					analysis = analysis,
-					suggestions = filtered_suggestions,
-
-					result = analysis,
-				},
-			}
-		end),
-
-		background {
-			auto = "Y",
-
-			flex(),
-			corner(4),
-			padding { y = 4 },
-
-			indexes(
-				function() return analysis().issues end,
-				function(log, layout)
-					return text {
-						order = 0 - layout + 100,
-						h = 20,
-
-						text = function()
-							return `{log().why} at {log().span.x}:{log().span.y}:{log().span.z}`
-						end,
-						text_size = 16,
-						text_style = "error",
-						xalignment = Enum.TextXAlignment.Left,
-
-						padding { x = 8 },
-					}
-				end
-			),
-
-			indexes(state.logs, function(log: () -> conch.Log, layout: number)
-				return text {
-					h = 20,
-					order = -layout - 1,
-
-					text = function() return log().text end,
-					text_size = 16,
-					text_style = function() return log().kind end,
-					xalignment = Enum.TextXAlignment.Left,
-
-					padding { x = 8 },
-				}
-			end),
-		},
-
-		gap { h = 4 },
-
-		background {
-			auto = Enum.AutomaticSize.Y,
-			corner(4),
-
-			show(
-				working,
-				function()
-					return loading {
-						h = 18,
-						speed = 6,
-						text_size = 18,
-						xalignment = Enum.TextXAlignment.Left,
-					}
+			console_output {
+				ws = 1,
+				auto = "y",
+				order = function()
+					return if state.alignment() == "bottom" then 1 else -1
 				end,
-				function()
-					return textbox {
-						text = raw_text,
-						update_text = function(text: string)
-							local position = next_cursor_position
-								or cursor_position()
-							local at =
-								string.sub(text, position - 1, position - 1)
-							local suggestions = filtered_suggestions()
-							local selected_suggestion =
-								suggestions[selected_suggestion()]
 
-							if at == "\t" and selected_suggestion then
-								text = autofill(
-									raw_text(),
-									analysis().replace,
-									selected_suggestion.text
-								)
-							end
+				errors = function()
+					local issues = analysis().issues
+					local texts = {}
 
-							raw_text(text)
-						end,
-						placeholder = "Enter your command",
-						text_size = 18,
-						xalignment = Enum.TextXAlignment.Left,
-						-- multiline = function() return #analysis().issues > 0 end,
+					for _, issue in issues do
+						table.insert(
+							texts,
+							`{issue.why} at {issue.span.x}:{issue.span.y}:{issue.span.z}`
+						)
+					end
 
-						enter = function(value)
-							history_n = 0
-							table.insert(history, 1, value)
-							raw_text ""
-							state.focused(true)
+					return texts
+				end,
+			},
 
-							working(true)
-							conch.execute(value)
-							working(false)
-						end,
+			container {
+				h = 4,
+				order = function()
+					return if state.alignment() == "bottom" then 2 else -2
+				end,
+			},
 
-						focused = state.focused,
-						update_focused = state.focused,
+			executor {
+				ws = 1,
+				order = function()
+					return if state.alignment() == "bottom" then 3 else -3
+				end,
 
-						{
-							CursorPosition = cursor_position,
-							changed("CursorPosition", function(new)
-								-- note: reimplement deferred behavior so that this doesn't freak out in immediate mode.
-								if next_cursor_position then
-									next_cursor_position = new
-									return
-								end
+				working = working,
+				filtered_suggestions = filtered_suggestions,
+				analysis = analysis,
+				update_cursor = cursor_position,
 
-								next_cursor_position = new
-								task.defer(function()
-									cursor_position(next_cursor_position)
-									next_cursor_position = false
-								end)
-							end),
-						},
-					}
-				end
-			),
-
-			padding { x = 8, y = 8 },
-			flex():fill():vertical("center"):horizontal "left",
-
-			changed("AbsolutePosition", absolute_position),
+				update_text = raw_text,
+				execute = function(text)
+					working(true)
+					local ok, err = pcall(conch.execute, text)
+					working(false)
+				end,
+			},
 		},
 	}
 end

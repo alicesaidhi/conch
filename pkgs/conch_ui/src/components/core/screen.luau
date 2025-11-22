@@ -1,4 +1,4 @@
-local vide = require "../../roblox_packages/vide"
+local vide = require "../../../roblox_packages/vide"
 
 local create = vide.create
 

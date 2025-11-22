@@ -126,7 +126,7 @@ local function get_value<T>(token: ast.Token<ast.TokenKind>): unknown
 			"\\([0-9][0-9]?[0-9]?)",
 			function(value: string)
 				local code = tonumber(value)
-				assert(code)
+				if not code or code > 255 then return value end
 				return string.char(code)
 			end
 		)

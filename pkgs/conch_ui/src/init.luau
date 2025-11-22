@@ -4,6 +4,7 @@ local UserInputService = game:GetService "UserInputService"
 local app = require "@self/app"
 local conch = require "./roblox_packages/conch"
 local state = require "@self/state"
+local theme = require "@self/theme"
 local vide = require "./roblox_packages/vide"
 
 local mounted = false
@@ -30,6 +31,8 @@ local function bind_to(input: Enum.KeyCode | Enum.UserInputType)
 end
 
 return {
+	alignment = state.alignment,
+	theme = theme,
 
 	app = app,
 	mount = mount,

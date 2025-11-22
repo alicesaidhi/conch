@@ -82,4 +82,9 @@ export type Result = { type: "ok", results: unknown } | { type: "err" }
 export type Role = string
 export type Permission = string
 
+export type Stream = {
+	--- Writes characters to the terminal
+	write: (Stream, buffer) -> (),
+}
+
 return {}

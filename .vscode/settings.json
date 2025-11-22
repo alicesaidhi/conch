@@ -14,12 +14,14 @@
     "out": true,
   },
   "luau-lsp.require.mode": "relativeToFile",
+  "luau-lsp.completion.imports.stringRequires.enabled": true,
   "luau-lsp.require.directoryAliases": {
     "@lune/": "~/.lune/.typedefs/0.8.9/"
   },
 
   "[luau]": {
-	"editor.formatOnSave": true
+	"editor.formatOnSave": true,
+	"editor.defaultFormatter": "JohnnyMorganz.stylua"
   },
 
   "[markdown]": {
