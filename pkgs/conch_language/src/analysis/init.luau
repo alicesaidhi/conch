@@ -46,6 +46,7 @@ export type StrangeType = {
 
 	read suggestions: Type | ((string) -> { Suggestion })?,
 	read match: Type | ((unknown) -> boolean)?,
+	read exact_match: Type | ((unknown) -> boolean)?,
 }
 
 --[=[
@@ -434,24 +435,34 @@ local function get_type_name(type: Type?)
 end
 
 -- using an evaluated value, check if it matches the given type
-local function match_eval_value(value: unknown, type: Type): Type?
+local function match_eval_value(
+	value: unknown,
+	type: Type,
+	exact: boolean?
+): Type?
 	if type.kind == "literal" then
 		return if value == type.value then type else nil
 	elseif type.kind == "command" or type.kind == "function" then
 		return if typeof(value) == "function" then type else nil
 	elseif type.kind == "strange" then
-		if type.match then
-			if typeof(type.match) == "table" then
-				return if match_eval_value(value, type.match) then type else nil
+		local match_fn = if exact
+			then type.exact_match or type.match
+			else type.match
+
+		if match_fn then
+			if typeof(match_fn) == "table" then
+				return if match_eval_value(value, match_fn, exact)
+					then type
+					else nil
 			else
-				return if type.match(value) then type else nil
+				return if match_fn(value) then type else nil
 			end
 		else
 			return type
 		end
 	elseif type.kind == "intersection" then
 		for _, field in type.fields do
-			if not match_eval_value(value, field) then return nil end
+			if not match_eval_value(value, field, exact) then return nil end
 		end
 
 		return type
@@ -459,7 +470,7 @@ local function match_eval_value(value: unknown, type: Type): Type?
 		local matching = {}
 
 		for _, field in type.fields do
-			if match_eval_value(value, field) then
+			if match_eval_value(value, field, exact) then
 				table.insert(matching, type)
 			end
 		end
@@ -476,11 +487,13 @@ local function match_eval_value(value: unknown, type: Type): Type?
 		local map_keys = {}
 
 		if type.fields then
-			for key, value in type.fields do
-				local ok, result = pcall(rawget, value, key.value :: any)
+			for type_key, type_value in type.fields do
+				local ok, result = pcall(rawget, value, type_key.value :: any)
 				if not ok then return nil end
-				if not match_eval_value(result, type) then return type end
-				if key.value then map_keys[key.value] = value end
+				if not match_eval_value(result, type_value, exact) then
+					return nil
+				end
+				if type_key.value then map_keys[type_key.value] = value end
 			end
 		end
 
@@ -489,10 +502,16 @@ local function match_eval_value(value: unknown, type: Type): Type?
 			for key, value in pairs(value) do
 				local mapped_type = map_keys[key :: any]
 				if mapped_type then continue end -- mapped types already pass; if they don't then they wouldve exited early.
-				if type.indexer and not match_eval_value(key, type.indexer) then
+				if
+					type.indexer
+					and not match_eval_value(key, type.indexer, exact)
+				then
 					return nil
 				end
-				if type.value and not match_eval_value(value, type.value) then
+				if
+					type.value
+					and not match_eval_value(value, type.value, exact)
+				then
 					return nil
 				end
 			end
@@ -508,7 +527,8 @@ end
 local function match(
 	state: InputState,
 	node: ast.Expression | ast.ExpressionCommand?,
-	type: Type
+	type: Type,
+	exact: boolean?
 ): Type?
 	if not node then
 		return nil
@@ -541,14 +561,14 @@ local function match(
 			end
 		end
 
-		return match_eval_value(var, type)
+		return match_eval_value(var, type, exact)
 	elseif type.kind == "command" then
 		return if node.kind == "command" then type else nil
 	elseif type.kind == "function" then
 		return if node.kind == "lambda" then type else nil
 	elseif type.kind == "intersection" then
 		for _, field in type.fields do
-			if not match(state, node, field) then return nil end
+			if not match(state, node, field, exact) then return nil end
 		end
 
 		return type
@@ -556,7 +576,9 @@ local function match(
 		local matching = {}
 
 		for _, field in type.fields do
-			if match(state, node, field) then table.insert(matching, field) end
+			if match(state, node, field, exact) then
+				table.insert(matching, field)
+			end
 		end
 
 		if #matching > 0 then
@@ -568,13 +590,13 @@ local function match(
 
 		return nil
 	elseif type.kind == "strange" and typeof(type.match) == "table" then
-		return if match(state, node, type.match) then type else nil
+		return if match(state, node, type.match, exact) then type else nil
 	elseif
 		type.kind == "strange"
 		or type.kind == "literal"
 		or type.kind == "table"
 	then
-		return match_eval_value(evaluate_expression(node), type)
+		return match_eval_value(evaluate_expression(node), type, exact)
 	end
 
 	return nil
@@ -814,7 +836,9 @@ local function complete_command(
 
 	if not arg_type then return end
 
-	local suggestions: { Suggestion } = {}
+	local suggestions: { Suggestion } = state.result
+			and state.result.suggestions
+		or {}
 
 	state.result = {
 		replace = arg_node and arg_node.span
@@ -855,11 +879,13 @@ local function choose_command(
 	node: ast.Command,
 	type: IntersectionType
 )
+	local original = {}
 	local possible_commands: { CommandType } = {}
 
 	for idx, value in normalize_intersections({}, type) do
 		if value.kind ~= "command" then continue end
 		table.insert(possible_commands, value)
+		table.insert(original, value)
 	end
 
 	for i = #possible_commands, 1, -1 do
@@ -867,38 +893,34 @@ local function choose_command(
 		local last_argument = cmd.arguments[#cmd.arguments]
 		local is_vararg = if last_argument then last_argument.varargs else false
 
-		if not is_vararg and #cmd.arguments > #node.arguments then
+		if not is_vararg and #cmd.arguments < #node.arguments then
 			swap_pop(possible_commands, i)
 			continue
 		end
 
-		local arg_idx = 1
-		local type_idx = 1
-		while arg_idx < #node.arguments do
-			local argument = cmd.arguments[type_idx]
+		local bad = false
+
+		for j, arg in node.arguments do
+			local arg_type = cmd.arguments[j]
+
+			if #cmd.arguments < j and is_vararg then
+				arg_type = last_argument
+			end
 
 			if
-				argument
-				and (
-					not argument.type
-					or match(state, node.arguments[arg_idx], argument.type)
-				) -- in the case no type is defined, always pass
+				not arg_type
+				or arg_type.type
+					and not match(state, arg, arg_type.type, true)
 			then
-				arg_idx += 1
-
-				-- in the case of varargs and we have more arguments than the total
-				-- amount of arguments, just ignore.
-				if is_vararg and arg_idx > #cmd.arguments then continue end
-				type_idx += 1
-			else
-				swap_pop(possible_commands, i)
+				bad = true
 				break
 			end
 		end
-	end
 
-	for _, command in possible_commands do
-		complete_command(state, node, command)
+		if bad then
+			swap_pop(possible_commands, i)
+			continue
+		end
 	end
 
 	if #possible_commands == 0 then
@@ -906,6 +928,11 @@ local function choose_command(
 			state.issues,
 			{ why = "no command matches the given type", span = node.span }
 		)
+		possible_commands = original
+	end
+
+	for _, command in possible_commands do
+		complete_command(state, node, command)
 	end
 end
 
@@ -991,9 +1018,19 @@ return {
 
 		--todo: suggestion deduplication
 		if state.result and state.result.suggestions then
+			local suggestions = {}
+			local deduplicate = {}
+
 			for idx, suggestion in state.result.suggestions do
 				(suggestion :: any).text = wrap_if_necessary(suggestion)
+				deduplicate[suggestion.display] = suggestion
 			end
+
+			for _, suggestion in deduplicate do
+				table.insert(suggestions, suggestion)
+			end
+
+			state.result.suggestions = suggestions
 		end
 
 		return {

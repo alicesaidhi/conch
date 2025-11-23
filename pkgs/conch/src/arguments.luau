@@ -78,6 +78,7 @@ local function register_strange_type<T>(p: {
 
 	read suggestions: language.Type | ((string) -> { language.Suggestion })?,
 	read match: language.Type | ((unknown) -> boolean)?,
+	read exact_match: language.Type | ((unknown) -> boolean)?,
 }): language.StrangeType
 	local strange_type: language.StrangeType = {
 		kind = "strange",
@@ -88,6 +89,7 @@ local function register_strange_type<T>(p: {
 
 		suggestions = p.suggestions,
 		match = p.match,
+		exact_match = p.exact_match
 	}
 
 	stored_types[p.id] = strange_type
@@ -154,7 +156,7 @@ local function generate_dynamic_options<K, V>(
 
 			if value == nil then
 				return error(
-					`could not convert "{tostring(key)}" into a valid option`
+					`could not convert "{tostring(key)}" into a valid option, expected something like {(next(fn()))}`
 				)
 			else
 				return value
@@ -162,7 +164,6 @@ local function generate_dynamic_options<K, V>(
 		end,
 		match = function(key: unknown)
 			local fn_key = next(fn())
-			print(typeof(key), typeof(fn_key))
 
 			if fn_key == nil then return false end
 			return typeof(key) == typeof(fn_key)
@@ -181,6 +182,9 @@ local function generate_dynamic_options<K, V>(
 
 			return suggestions
 		end,
+		exact_match = function(key)
+			return fn()[key] ~= nil
+		end
 	}
 
 	return wrap_type(strange_type, name, description)
@@ -233,6 +237,7 @@ local any_type = register_strange_type {
 	convert = nil,
 	match = nil,
 	suggestions = nil,
+	exact_match = nil
 }
 
 local number_type = register_strange_type {
@@ -245,6 +250,7 @@ local number_type = register_strange_type {
 		return value
 	end,
 	match = function(x: unknown) return type(x) == "number" end,
+	exact_match = nil,
 
 	suggestions = nil,
 }
@@ -259,6 +265,7 @@ local string_type = register_strange_type {
 		return value
 	end,
 	match = function(x: unknown) return type(x) == "string" end,
+	exact_match = nil,
 
 	suggestions = nil,
 }
@@ -277,6 +284,7 @@ local boolean_type = register_strange_type {
 		end
 	end,
 	match = function(x: unknown) return type(x) == "boolean" end,
+	exact_match = nil,
 
 	suggestions = function(): { language.Suggestion }
 		return {
@@ -336,6 +344,7 @@ local vector_type = register_strange_type {
 
 		return false
 	end,
+	exact_match = nil,
 
 	suggestions = function(): { language.Suggestion }
 		return {
@@ -394,10 +403,22 @@ local player_type = register_strange_type {
 			return false
 		end
 	end,
+	exact_match = function(arg: unknown): boolean
+		if arg == "@s" then
+			return true
+		elseif typeof(arg) == "number" then
+			return Players:GetPlayerByUserId(arg) ~= nil
+		elseif typeof(arg) == "string" then
+			return Players:FindFirstChild(arg) ~= nil
+		elseif typeof(arg) == "Instance" and arg:IsA "Player" then
+			return true
+		else
+			return false
+		end
+	end,
 
 	suggestions = function(value): { language.Suggestion }
 		local suggestions: { language.Suggestion } = {}
-		print(value)
 
 		table.insert(suggestions, {
 			kind = nil,
@@ -422,6 +443,217 @@ local player_type = register_strange_type {
 	end,
 }
 
+local userid_type = register_strange_type {
+	type = "userid",
+	id = "__userid_base",
+	convert = function(arg: unknown)
+		local ctx = context.get_command_context()
+		if arg == "@s" then
+			return ctx and ctx.executor.player and ctx.executor.player.UserId
+				or error "not executed by a player"
+		elseif typeof(arg) == "number" then
+			return arg
+		elseif typeof(arg) == "string" then
+			local player = Players:FindFirstChild(arg) :: Player?
+			local userid = if player
+				then player.UserId
+				else Players:GetUserIdFromNameAsync(arg)
+			return userid
+		elseif typeof(arg) == "Instance" and arg:IsA "Player" then
+			return arg.UserId
+		else
+			error(`unknown arg {arg}`)
+		end
+	end,
+
+	match = function(n: unknown)
+		return typeof(n) == "number"
+			or typeof(n) == "Instance" and n:IsA "Player"
+			or typeof(n) == "string"
+	end,
+	exact_match = function(arg: unknown): boolean
+		if arg == "@s" then
+			return true
+		elseif typeof(arg) == "number" then
+			return true
+		elseif typeof(arg) == "string" then
+			return true -- sorry we are not checking
+		elseif typeof(arg) == "Instance" and arg:IsA "Player" then
+			return true
+		else
+			return false
+		end
+	end,
+
+	suggestions = function(value): { language.Suggestion }
+		local suggestions: { language.Suggestion } = {}
+
+		table.insert(suggestions, {
+			kind = nil,
+			metadata = {
+				name = "self",
+				description = "Refers to yourself",
+			},
+			text = "@s",
+			display = "@s (self)",
+		})
+
+		for _, player in Players:GetPlayers() do
+			table.insert(suggestions, {
+				kind = nil,
+				metadata = nil,
+				text = player.Name,
+				display = `{player.DisplayName} (@{player.Name})`,
+			})
+		end
+
+		return suggestions
+	end,
+}
+
+local color_type = register_strange_type {
+	type = "Color3",
+	id = "__color3_base",
+	convert = function(value: unknown)
+		return if type(value) == "vector"
+			then Color3.fromRGB(value.x, value.y, value.z)
+			elseif typeof(value) == "string" then Color3.fromHex(value)
+			elseif
+				typeof(value) == "table"
+				and typeof(value[1]) == "number"
+				and typeof(value[2]) == "number"
+				and typeof(value[3]) == "number"
+			then Color3.fromRGB(value.x, value.y, value.z)
+			else error(`could not convert "{typeof(value)}" into Color3`)
+	end,
+
+	match = function(t: unknown)
+		return if type(t) == "vector"
+			then true
+			elseif typeof(t) == "string" then true
+			elseif typeof(t) == "table" and typeof(t[1]) == "number" and typeof(
+				t[2]
+			) == "number" and typeof(t[3]) == "number" then true
+			else false
+	end,
+	exact_match = nil,
+
+	suggestions = nil,
+}
+
+local DURATION_TIMES: { [string]: number } = {
+	ms = 1e-3,
+	milisecond = 1e-3,
+	miliseconds = 1e-3,
+
+	s = 1,
+	sec = 1,
+	second = 1,
+	seconds = 1,
+
+	min = 60,
+	minute = 60,
+	minutes = 60,
+
+	hr = 60 * 60,
+	hour = 60 * 60,
+	hours = 60 * 60,
+
+	d = 60 * 60 * 24,
+	day = 60 * 60 * 24,
+	days = 60 * 60 * 24,
+
+	wk = 60 * 60 * 24 * 7,
+	week = 60 * 60 * 24 * 7,
+	weeks = 60 * 60 * 24 * 7,
+
+	mo = 60 * 60 * 24 * 30,
+	month = 60 * 60 * 24 * 30,
+	months = 60 * 60 * 24 * 30,
+
+	y = 60 * 60 * 24 * 365,
+	yr = 60 * 60 * 24 * 365,
+	year = 60 * 60 * 24 * 365,
+	years = 60 * 60 * 24 * 365,
+}
+
+local function parse_duration(text: unknown)
+	if typeof(text) ~= "string" then error "cannot parse non string" end
+
+	local words = string.split(text, " ")
+	local n = 0
+
+	for _, word in words do
+		local duration_string, suffix = string.match(word, `(.-)[%s]?([A-z]+)$`)
+		if duration_string and suffix then
+			local mul = DURATION_TIMES[suffix]
+			if not mul then error(`"{mul}" is not a valid suffix`, 0) end
+			local duration = tonumber(duration_string)
+			if not duration then
+				error(`could not convert "{word}" into a duration`, 0)
+			end
+			n += duration * mul
+		else
+			local duration = tonumber(word)
+			if not duration then
+				error(`could not convert "{word}" into a duration`, 0)
+			end
+			n += duration
+		end
+	end
+
+	return n
+end
+
+local duration_type = register_strange_type {
+	type = "number",
+	id = "__duration_base",
+
+	convert = function(n: unknown): number
+		return if typeof(n) == "number" then n else parse_duration(n)
+	end,
+
+	match = function(value)
+		return typeof(value) == "string" or typeof(value) == "number"
+	end,
+
+	suggestions = function(text: string)
+		local words = string.split(text:gsub(`"(.*)"`, "%1"), " ")
+		local last_word = words[#words] or "1"
+
+		local suggestions: { language.Suggestion } = {}
+		local the_rest = table.concat(words, " ", 1, #words - 1)
+		local before, suffix = string.match(last_word, "(.-)([A-z]+)$")
+
+		if suffix then
+			for example_suffix in DURATION_TIMES do
+				table.insert(suggestions, {
+					text = `{before}{example_suffix}`,
+					display = `{before}{example_suffix}`,
+				})
+			end
+		else
+			for example_suffix in DURATION_TIMES do
+				table.insert(suggestions, {
+					text = `{last_word}{example_suffix}`,
+					display = `{last_word}{example_suffix}`,
+				})
+			end
+		end
+
+		the_rest = if #the_rest > 0 then `{the_rest} ` else the_rest
+		for idx, s in suggestions do
+			suggestions[idx] = {
+				text = `{the_rest}{s.text}`,
+				display = `{the_rest}{s.display}`,
+			}
+		end
+
+		return suggestions
+	end,
+	exact_match = nil,
+}
+
 -- pluralize
 
 --[=[
@@ -432,7 +664,8 @@ local function pluralize<T>(
 	type: language.StrangeType,
 	additional: {
 		suggestions: language.Type | ((unknown) -> { language.Suggestion })?,
-		match: ((unknown) -> boolean)?,
+		match: language.Type | ((unknown) -> boolean)?,
+		exact_match: language.Type | ((unknown) -> boolean)?,
 		convert: ((unknown) -> T)?,
 	}?
 ): language.Type
@@ -477,6 +710,7 @@ local function pluralize<T>(
 				},
 			},
 		} :: language.UnionType,
+		exact_match = nil
 	}
 
 	if additional then
@@ -487,6 +721,7 @@ local function pluralize<T>(
 			convert = additional.convert,
 			match = additional.match,
 			suggestions = additional.suggestions,
+			exact_match = additional.exact_match
 		}
 	end
 
@@ -530,9 +765,53 @@ local players_type = pluralize(player_type, {
 	end,
 
 	match = function(v: unknown) return typeof(v) == "string" end,
+	exact_match = function(v: unknown) return v == "@a" end,
 })
 
+local userids_type = pluralize(userid_type, {
+	convert = function(v: unknown)
+		if v == "@a" then
+			local players = Players:GetPlayers()
+			local users = {}
+
+			for _, user in players do
+				table.insert(users, user.UserId)
+			end
+
+			return users
+		else
+			error(`could not convert "{typeof(v)}" into players`)
+		end
+	end,
+
+	suggestions = function(v: unknown): { language.Suggestion }
+		return {
+			{
+				kind = nil,
+				metadata = {
+					name = "all players",
+					description = "Refers to all players in the server",
+				},
+				text = "@a",
+				display = "@a (all)",
+			},
+		}
+	end,
+
+	match = function(v: unknown) return typeof(v) == "string" end,
+	exact_match = function(v: unknown) return v == "@a" end,
+})
+
+local colors_type = pluralize(color_type)
+
 -- modifiers
+
+local function literal<T>(value: T): T
+	return {
+		kind = "literal",
+		value = value,
+	}
+end
 
 local function opt<T>(arg: T): T
 	local type = arg :: language.CommandArgument
@@ -576,40 +855,75 @@ end
 --[=[
 Given a table, creates a type that requires it to match the table
 ]=]
-local function struct<T, Indexer, Value>(input: T, indexer: Indexer?, value: Value?): GenStruct<T, Indexer, Value>
+local function struct<T, Indexer, Value>(
+	input: T,
+	indexer: Indexer?,
+	value: Value?
+): GenStruct<T, Indexer, Value>
 	local fields: { [language.LiteralType]: language.Type } = {}
 
 	for key: any, value: any in pairs(input) do
-		if value.kind == "argument" then
-			value = value.type
-		end
-		
-		if key.kind == "argument" then
-			key = key.type
-		end
-		
+		if value.kind == "argument" then value = value.type end
+
+		if key.kind == "argument" then key = key.type end
+
 		fields[{
 			kind = "literal",
-			value = key
-		} :: any] = value  :: any
+			value = key,
+		} :: any] = value :: any
 	end
-	
+
 	local table_type: language.TableType = {
 		kind = "table",
-		
+
 		fields = fields,
-		indexer = if indexer and indexer.kind == "argument" then indexer.type else indexer,
-		value = if value and value.kind == "argument" then value.type else indexer
+		indexer = if indexer and indexer.kind == "argument"
+			then indexer.type
+			else indexer,
+		value = if value and value.kind == "argument"
+			then value.type
+			else indexer,
 	}
 
-	return {
-		kind = "argument",
-		name = "table",
-		description = "",
+	return table_type
+end
 
-		type = table_type,
-		varargs = false
-	} :: any
+local union = function(...)
+	return {
+		kind = "union",
+		fields = { ... },
+	}
+end :: & (<A>(A) -> A) & (<A, B>(A, B) -> A | B) & (<A, B, C>(A, B, C) -> A | B | C) & (<A, B, C, D>(A, B, C, D) -> A | B | C | D) & (<A, B, C, D, E>(
+	A,
+	B,
+	C,
+	D,
+	E
+) -> A | B | C | D | E)
+
+local intersect = function<T...>(...: T...)
+	return {
+		kind = "intersect",
+		fields = { ... },
+	}
+end :: & (<A>(A) -> A) & (<A, B>(A, B) -> A & B) & (<A, B, C>(A, B, C) -> A & B & C) & (<A, B, C, D>(A, B, C, D) -> A & B & C & D) & (<A, B, C, D, E>(
+	A,
+	B,
+	C,
+	D,
+	E
+) -> A & B & C & D & E)
+
+export type Overload = {
+	kind: "overload",
+	overloads: { { any } },
+}
+
+local function overload<T>(p: { { any } }): ...any
+	return {
+		kind = "overload",
+		overloads = p,
+	}
 end
 
 local args = {
@@ -618,6 +932,14 @@ local args = {
 	string = wrap_type(string_type, "string"),
 	boolean = wrap_type(boolean_type, "boolean"),
 	vector = wrap_type(vector_type, "vector"),
+
+	color = wrap_type(color_type, "Color3"),
+	colors = wrap_type(colors_type, "Color3s"),
+
+	userid = wrap_type(userid_type, "UserId"),
+	userids = wrap_type(userids_type, "UserIds"),
+
+	duration = wrap_type(duration_type, "duration"),
 
 	player = wrap_type(player_type, "player"),
 	players = wrap_type(players_type, "players"),
@@ -628,7 +950,14 @@ local args = {
 	opt = opt,
 	variadic = variadic,
 
-	struct = struct
+	struct = struct,
+
+	literal = literal,
+
+	union = union,
+	intersect = intersect,
+
+	overload = overload,
 }
 
 return {
@@ -645,6 +974,14 @@ return {
 		boolean = boolean_type,
 		vector = vector_type,
 		player = player_type,
+
+		color = color_type,
+		colors = colors_type,
+
+		userid = userid_type,
+		userids = userids_type,
+
+		duration = duration_type,
 
 		numbers = numbers_type,
 		strings = strings_type,

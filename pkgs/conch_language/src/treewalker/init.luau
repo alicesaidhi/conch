@@ -51,7 +51,7 @@ local conch_functions: { [string]: string | true } = setmetatable(
 	{ __mode = "k" }
 )
 
-local PATTERN_REMOVE_TRACE = "^.+:%d+:%s*"
+local PATTERN_REMOVE_TRACE = ""
 
 --[=[
 Obtains a stack trace for the called function, which can be used to help

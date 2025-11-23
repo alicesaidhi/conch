@@ -120,10 +120,14 @@ local function determine_cmd_type(type: language.Type, ...: unknown)
 			)
 			local bad = false
 
-			for _, argument in field.arguments do
+			for j, argument in field.arguments do
 				if
 					argument.type
-					and not language.matches_type(select(i, ...), argument.type)
+					and not language.matches_type(
+						select(j, ...),
+						argument.type,
+						true
+					)
 				then
 					bad = true
 					break
@@ -141,7 +145,7 @@ local function determine_cmd_type(type: language.Type, ...: unknown)
 		end
 		if #options == 0 then
 			error(
-				`could not determine valid overload for {options[1].name}, no options matched`
+				`could not determine valid overload for {type.fields[1].name}, no options matched`
 			)
 		end
 
@@ -230,28 +234,9 @@ local function unregister_command(info: types.CommandRepresentation)
 	write_global(info.name, nil)
 end
 
-local function register_command<T...>(
-	name: string,
-	info: {
-		permissions: { types.Permission },
-		description: string?,
-		arguments: () -> T...,
-		callback: (T...) -> ...any,
-	}
-)
-	local args = { info.arguments() } :: { language.CommandArgument }
-	local callback = info.callback
-	local type_information = {
-		kind = "command",
-
-		name = name,
-		description = info.description or "",
-
-		arguments = args,
-	}
-
+local function fix_arguments(args: { language.CommandArgument })
 	for idx, argument in args do
-		if argument.kind ~= "argument" then
+		if argument.kind ~= "argument" and argument.kind ~= "overload" then
 			local arg_name = arguments.obtain_type_name(argument)
 			args[idx] = {
 				kind = "argument",
@@ -262,6 +247,62 @@ local function register_command<T...>(
 			}
 		end
 	end
+end
+
+local function from_arguments_or_overload(
+	name: string,
+	description: string?,
+	args: {
+		language.CommandArgument
+		| arguments.Overload
+	}
+): language.Type
+	local first = args[1]
+	if first and first.kind == "overload" then
+		local overloads: { language.CommandType } = {}
+
+		for _, overload in first.overloads do
+			fix_arguments(overload)
+			table.insert(overloads, {
+				kind = "command" :: "command",
+				name = name,
+				description = description or "",
+				arguments = overload,
+			})
+		end
+
+		return {
+			kind = "intersection",
+			fields = overloads,
+		}
+	else
+		fix_arguments(args)
+		return {
+			kind = "command",
+
+			name = name,
+			description = description or "",
+
+			arguments = args :: { language.CommandArgument },
+		}
+	end
+end
+
+local function register_command<T...>(
+	name: string,
+	info: {
+		permissions: { types.Permission },
+		description: string?,
+		arguments: () -> T...,
+		callback: (T...) -> ...any,
+	}
+)
+	local args =
+		{ info.arguments() } :: { language.CommandArgument | arguments.Overload }
+
+	local callback = info.callback
+	local type_information: language.Type =
+		from_arguments_or_overload(name, info.description, args)
 
 	local representation: types.CommandRepresentation = {
 		name = name,

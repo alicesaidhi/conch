@@ -1,4 +1,3 @@
-local language = require "../roblox_packages/language"
 local types = require "./types"
 
 return {
@@ -17,7 +16,6 @@ return {
 	local_commands = {} :: {
 		[string]: {
 			representation: types.CommandRepresentation,
-			arguments: { language.AnalysisArgument | types.Overload },
 		},
 	},
 
