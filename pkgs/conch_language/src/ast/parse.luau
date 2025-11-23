@@ -1156,6 +1156,11 @@ local function parse(input: buffer): Output
 				local node: ast.ExpressionString =
 					{ kind = "string", token = token, span = token.span }
 				return node
+			elseif current_is "identifier" then
+				local token = expect_fatal "identifier"
+				local node: ast.ExpressionString =
+					{ kind = "string", token = token, span = token.span }
+				return node
 			elseif current_is "{" then
 				return parse_table()
 			elseif current_is "|" then

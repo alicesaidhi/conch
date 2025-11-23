@@ -1,9 +1,7 @@
+local analysis = require "../../conch_language/src/analysis"
 local language = require "../roblox_packages/language"
 
-export type ArgumentType<T> = {
-	convert: ((any) -> T)?,
-	analysis: language.AnalysisArgument?,
-}
+export type TypeRegistrator<T> = (name: string?, description: string?) -> T
 
 export type User = {
 	read id: string,
@@ -33,19 +31,13 @@ export type AfterCommandRunContext = {
 	result: { unknown },
 }
 
-export type Overload = {
-	read kind: "overload",
-
-	overloads: { language.Overload },
-}
-
 export type CommandRepresentation = {
 	read name: string,
 	read description: string?,
 	read permissions: { string },
 	read callback: (...any) -> ...any,
 
-	read information: language.Metadata,
+	read type: language.Type,
 
 	dirty_replicate: boolean,
 }

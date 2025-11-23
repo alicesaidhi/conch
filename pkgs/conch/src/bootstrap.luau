@@ -102,7 +102,9 @@ return function()
 			permissions = {},
 			description = "Converts the given arguments into a string and sends it to the output",
 			arguments = function()
-				return arg.variadic(arg.any("any", "Arguments to output"))
+				return arg.args.variadic(
+					arg.args.any("any", "Arguments to output")
+				)
 			end,
 			callback = conch_print,
 		})
@@ -110,7 +112,10 @@ return function()
 		console.register_command("sleep", {
 			description = "Waits for a given amount of time before continuing execution",
 			arguments = function()
-				return arg.number("time", "The amount of time to sleep for")
+				return arg.args.number(
+					"time",
+					"The amount of time to sleep for"
+				)
 			end,
 			callback = task.wait,
 		})
@@ -122,9 +127,9 @@ return function()
 			permissions = {},
 			description = "Attempts to set the given key and value onto the given object",
 			arguments = function()
-				return arg.any("object", "the object to set"),
-					arg.any("key", "key of the object"),
-					arg.any("value", "the value to set it to")
+				return arg.args.any("object", "the object to set"),
+					arg.args.any("key", "key of the object"),
+					arg.args.any("value", "the value to set it to")
 			end,
 			callback = set,
 		})

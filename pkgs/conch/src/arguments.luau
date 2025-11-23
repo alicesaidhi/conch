@@ -1,6 +1,5 @@
 local Players = game:GetService "Players"
 
-local console = require "./console"
 local context = require "./context"
 local language = require "../roblox_packages/language"
 local types = require "./types"
@@ -11,744 +10,648 @@ local function wrap_if_not(value)
 	return if type(value) == "table" then value else { value }
 end
 
-local anyT: types.ArgumentType<any> = {
-	convert = noop :: (unknown) -> any,
+local function obtain_type_name(type: language.Type)
+	if type.kind == "command" then
+		return "Command"
+	elseif type.kind == "function" then
+		return "Function"
+	elseif type.kind == "intersection" then
+		local fields = {}
 
-	analysis = {
-		kind = "argument",
-		optional = false,
-		name = "any",
-		type = "any",
+		for _, t in type.fields do
+			table.insert(fields, obtain_type_name(t))
+		end
 
-		vararg = false,
-	},
-}
+		return table.concat(fields, " & ")
+	elseif type.kind == "literal" then
+		return tostring(type.value)
+	elseif type.kind == "strange" then
+		return type.type
+	elseif type.kind == "union" then
+		local fields = {}
 
-local stringT: types.ArgumentType<string> = {
-	convert = tostring :: (unknown) -> string,
+		for _, t in type.fields do
+			table.insert(fields, obtain_type_name(t))
+		end
 
-	analysis = {
-		kind = "argument",
-		optional = false,
-		name = "string",
-		type = "string",
-	},
-}
+		return table.concat(fields, " | ")
+	elseif type.kind == "table" then
+		local keys = {}
 
-local stringsT: types.ArgumentType<{ string }> = {
-	convert = function(value: unknown)
-		if typeof(value) == "table" then
-			local copy = table.clone(value)
-			for k, v in copy do
-				copy[k] = tostring(v)
+		if type.fields then
+			for key, value in type.fields do
+				table.insert(
+					keys,
+					`{obtain_type_name(key)} = {obtain_type_name(value)}`
+				)
 			end
-			return copy
-		else
-			return { tostring(value) }
 		end
-	end,
 
-	analysis = {
-		kind = "argument",
-		optional = false,
-		name = "strings",
-		type = "{ string }",
-	},
-}
-
-local numberT: types.ArgumentType<number> = {
-	convert = function(input)
-		local n = tonumber(input)
-		if n == nil then error(`{input} is not a valid number`) end
-		return n
-	end,
-
-	analysis = {
-		kind = "argument",
-		optional = false,
-		name = "number",
-		type = "number",
-	},
-}
-
-local numbersT: types.ArgumentType<{ number }> = {
-	convert = function(input: unknown)
-		local input = wrap_if_not(input)
-		local copy = {}
-		for idx, value in input do
-			local n = tonumber(input)
-			if n == nil then error(`{input} is not a valid number`) end
-			copy[idx] = n
+		if type.indexer and type.value then
+			table.insert(
+				keys,
+				`[{obtain_type_name(type.indexer)}] = {obtain_type_name(
+					type.value
+				)}`
+			)
 		end
+
+		return `\{ {table.concat(keys, ", ")} \}`
+	end
+
+	return "error"
+end
+
+local stored_types = {}
+
+--[=[
+Given a identifier, registers a strange type for it.
+
+Strange types are a mechanism for conch to support types that do not normally
+exist within conch as a runtime.
+]=]
+local function register_strange_type<T>(p: {
+	read type: string,
+	read id: string,
+
+	read convert: ((unknown) -> T)?,
+
+	read suggestions: language.Type | ((string) -> { language.Suggestion })?,
+	read match: language.Type | ((unknown) -> boolean)?,
+}): language.StrangeType
+	local strange_type: language.StrangeType = {
+		kind = "strange",
+		type = p.type,
+		id = p.id,
+
+		convert = p.convert,
+
+		suggestions = p.suggestions,
+		match = p.match,
+	}
+
+	stored_types[p.id] = strange_type
+
+	return strange_type
+end
+
+--[=[
+Given an analysis type, turns it into a function that can be exported
+
+This returns a table matching the CommandArgument type, which is not exposed.
+It first attempts to auto-generate a name for the given type, but can be replaced
+with a custom one if desirable.
+
+note: it's atm not possible to typecheck this properly; please manually typecast it
+]=]
+local function wrap_type<T>(
+	type: language.Type?,
+	name: string?,
+	description: string?
+): types.TypeRegistrator<T>
+	local default_name = type and obtain_type_name(type) or "unknown"
+
+	local template = {
+		kind = "argument",
+		name = name or default_name,
+		description = description or "",
+		type = type,
+		varargs = false,
+	}
+
+	return function(name: string?, description: string?)
+		local copy = table.clone(template)
+
+		copy.name = name or copy.name
+		copy.description = description or copy.description
+
 		return copy
-	end,
-
-	analysis = {
-		kind = "argument",
-		optional = false,
-		vararg = false,
-		name = "numbers",
-		type = "{ number }",
-	},
-}
-
-local booleanT: types.ArgumentType<boolean> = {
-	convert = function(v: unknown)
-		if typeof(v) == "boolean" then
-			return v
-		elseif typeof(v) == "number" and v > 0 then
-			return true
-		elseif typeof(v) == "number" and v <= 0 then
-			return false
-		else
-			error(`{typeof(v)} is not a valid boolean`)
-		end
-	end,
-
-	analysis = {
-		kind = "argument",
-		optional = false,
-		vararg = false,
-		name = "boolean",
-		type = "boolean",
-
-		suggestions = function()
-			return {
-				{ text = "true", display = "true" },
-				{ text = "false", display = "false" },
-			}
-		end,
-	},
-}
-
-local booleansT: types.ArgumentType<{ boolean }> = {
-	convert = function(value: unknown): { boolean }
-		if typeof(value) == "table" then
-			local copy = table.clone(value) :: { [any]: any }
-			for k, v in copy do
-				if typeof(v) == "boolean" then
-					copy[k] = v
-				elseif typeof(v) == "number" and v > 0 then
-					copy[k] = true
-				elseif typeof(v) == "number" and v <= 0 then
-					copy[k] = false
-				else
-					error(`type {typeof(v)} of {k} is not a valid boolean`)
-				end
-			end
-			return copy
-		elseif typeof(value) == "boolean" then
-			return { value }
-		elseif typeof(value) == "number" and value > 0 then
-			return { true }
-		elseif typeof(value) == "number" and value <= 0 then
-			return { false }
-		else
-			error(`{typeof(value)} is not a valid boolean`)
-		end
-	end,
-
-	analysis = {
-		kind = "argument",
-		optional = false,
-		vararg = false,
-		name = "boolean",
-		type = "{ boolean }",
-
-		suggestions = function()
-			return {
-				{ text = "true", display = "true" },
-				{ text = "false", display = "false" },
-			}
-		end,
-	},
-}
-
-local tableT: types.ArgumentType<{ [any]: any }> = {
-	convert = noop,
-
-	analysis = {
-		kind = "argument",
-		optional = false,
-		name = "table",
-		type = "table",
-	},
-}
-
-local function into_vector(value: unknown): vector
-	if type(value) == "vector" then
-		return value
-	elseif typeof(value) == "table" then
-		return vector.create(value[1] or 0, value[2] or 0, value[3] or 0)
-	else
-		error(`{value} is not valid`, 0)
 	end
 end
 
-local vectorT: types.ArgumentType<vector> = {
-	convert = into_vector,
+--[=[
+Given a id, returns a strange type if registered.
+]=]
+local function get_strange_type(id: string): language.StrangeType?
+	return stored_types[id]
+end
 
-	analysis = {
-		kind = "argument",
-		optional = false,
-		vararg = false,
-		name = "vector",
-		type = "vector",
-	},
-}
-local vectorsT: types.ArgumentType<{ vector }> = {
-	convert = function(value: unknown)
-		if type(value) == "vector" then
-			return { value }
-		elseif typeof(value) == "table" then
-			local t: { vector } = {}
-			for i, v in value do
-				table.insert(t, into_vector(v))
+--[=[
+Given a list of dynamic options, generates an enum type.
+]=]
+local function generate_dynamic_options<K, V>(
+	id: string,
+	fn: () -> { [K]: V },
+	name: string?,
+	description: string?
+): types.TypeRegistrator<V>
+	local strange_type = register_strange_type {
+		type = name or "enum",
+		id = `__enum_{id}`,
+
+		convert = function(key: unknown)
+			local value = fn()[key]
+
+			if value == nil then
+				return error(
+					`could not convert "{tostring(key)}" into a valid option`
+				)
+			else
+				return value
 			end
-			return t
+		end,
+		match = function(key: unknown)
+			local fn_key = next(fn())
+			print(typeof(key), typeof(fn_key))
+
+			if fn_key == nil then return false end
+			return typeof(key) == typeof(fn_key)
+		end,
+		suggestions = function(v)
+			local suggestions: { language.Suggestion } = {}
+
+			for key, value in fn() do
+				table.insert(suggestions, {
+					text = key,
+					display = key,
+					kind = nil,
+					metadata = nil,
+				})
+			end
+
+			return suggestions
+		end,
+	}
+
+	return wrap_type(strange_type, name, description)
+end
+
+--[=[
+Given a key map, generates an enum type
+]=]
+local function enum_from_map<T>(
+	id: string,
+	t: { [string]: T },
+	name: string?,
+	description: string?
+): types.TypeRegistrator<T>
+	return generate_dynamic_options(
+		id,
+		function() return t end,
+		name,
+		description
+	)
+end
+
+--[=[
+Given a array, generates an enum type
+]=]
+local function enum_from_array<T>(
+	id: string,
+	t: { T },
+	name: string?,
+	description: string?
+): types.TypeRegistrator<T>
+	return generate_dynamic_options(id, function()
+		local key_map = {}
+
+		for _, value in t do
+			key_map[value] = value
+			key_map[tostring(value)] = value
+		end
+
+		return key_map
+	end, name, description)
+end
+
+-- base types
+
+local any_type = register_strange_type {
+	type = "any",
+	id = "__any_base",
+
+	convert = nil,
+	match = nil,
+	suggestions = nil,
+}
+
+local number_type = register_strange_type {
+	type = "number",
+	id = "__number_base",
+
+	convert = function(x: unknown)
+		local value = tonumber(x)
+		if not value then error(`could not convert "{x}" to a number`) end
+		return value
+	end,
+	match = function(x: unknown) return type(x) == "number" end,
+
+	suggestions = nil,
+}
+
+local string_type = register_strange_type {
+	type = "string",
+	id = "__string_base",
+
+	convert = function(x: unknown)
+		local value = tostring(x)
+		if not value then error(`could not convert "{x}" to a string`) end
+		return value
+	end,
+	match = function(x: unknown) return type(x) == "string" end,
+
+	suggestions = nil,
+}
+
+local boolean_type = register_strange_type {
+	type = "boolean",
+	id = "__boolean_base",
+
+	convert = function(x: unknown): boolean
+		if typeof(x) == "number" then
+			return x ~= 0
+		elseif typeof(x) == "boolean" then
+			return x
 		else
-			error(`{value} is not valid`, 0)
+			return not not x
+		end
+	end,
+	match = function(x: unknown) return type(x) == "boolean" end,
+
+	suggestions = function(): { language.Suggestion }
+		return {
+			{
+				kind = "expression",
+				text = "true",
+				display = "true",
+				metadata = nil,
+			},
+			{
+				kind = "expression",
+				text = "false",
+				display = "false",
+				metadata = nil,
+			},
+		}
+	end,
+}
+
+local vector_type = register_strange_type {
+	type = "vector",
+	id = "__vector_base",
+
+	convert = function(v: unknown): vector
+		if type(v) == "vector" then
+			return v
+		elseif typeof(v) == "table" then
+			local x, y, z = rawget(v, 1), rawget(v, 2), rawget(v, 3)
+
+			if
+				typeof(x) == "number"
+				and typeof(y) == "number"
+				and (typeof(z) == "number" or z == nil)
+			then
+				return vector.create(x or 0, y or 0, z or 0)
+			end
+
+			error(`could not convert "{typeof(v)}" into vector`)
+		else
+			error(`could not convert "{typeof(v)}" into vector`)
+		end
+	end,
+	match = function(v: unknown)
+		if type(v) == "vector" then
+			return true
+		elseif typeof(v) == "table" then
+			local x, y, z = rawget(v, 1), rawget(v, 2), rawget(v, 3)
+
+			if
+				typeof(x) == "number"
+				and typeof(y) == "number"
+				and (typeof(z) == "number" or z == nil)
+			then
+				return true
+			end
+		end
+
+		return false
+	end,
+
+	suggestions = function(): { language.Suggestion }
+		return {
+			{
+				kind = "expression",
+				text = "true",
+				display = "true",
+				metadata = nil,
+			},
+			{
+				kind = "expression",
+				text = "false",
+				display = "false",
+				metadata = nil,
+			},
+		}
+	end,
+}
+
+local player_type = register_strange_type {
+	type = "player",
+	id = "__player_base",
+
+	convert = function(arg: unknown): Player
+		local ctx = context.get_command_context()
+		if arg == "@s" then
+			return ctx and ctx.executor.player
+				or error "not executed by a player"
+		elseif typeof(arg) == "number" then
+			local player = assert(
+				Players:GetPlayerByUserId(arg),
+				`player with id {arg} is not in this server`
+			)
+			return player
+		elseif typeof(arg) == "string" then
+			local player = assert(
+				Players:FindFirstChild(arg) :: Player,
+				`player "{arg}" is not valid`
+			)
+			return player
+		elseif typeof(arg) == "Instance" and arg:IsA "Player" then
+			return arg
+		else
+			error(`unknown arg {arg}`)
 		end
 	end,
 
-	analysis = {
-		kind = "argument",
-		optional = false,
-		vararg = false,
-		name = "vector",
-		type = "vector",
-	},
+	match = function(arg: unknown): boolean
+		if typeof(arg) == "number" then
+			return true
+		elseif typeof(arg) == "string" then
+			return true
+		elseif typeof(arg) == "Instance" and arg:IsA "Player" then
+			return true
+		else
+			return false
+		end
+	end,
+
+	suggestions = function(value): { language.Suggestion }
+		local suggestions: { language.Suggestion } = {}
+		print(value)
+
+		table.insert(suggestions, {
+			kind = nil,
+			metadata = {
+				name = "self",
+				description = "Refers to yourself",
+			},
+			text = "@s",
+			display = "@s (self)",
+		})
+
+		for _, player in Players:GetPlayers() do
+			table.insert(suggestions, {
+				kind = nil,
+				metadata = nil,
+				text = player.Name,
+				display = `{player.DisplayName} (@{player.Name})`,
+			})
+		end
+
+		return suggestions
+	end,
 }
 
---[=[
-Generates a new enum that can be passed to conch.register_type. It maps each string in a table to a specific value.
-]=]
-local function enum_map<V>(
-	map: { [string]: V },
-	name: string?,
-	description: string?
-): types.ArgumentType<V>
-	return {
-		convert = function(value): V
-			local key = tostring(value)
-			if map[key] == nil then error(`{key} is not valid`, 0) end
-			return map[key]
-		end,
+-- pluralize
 
-		analysis = {
-			kind = "argument",
-			optional = false,
-			vararg = false,
-			name = name or "enum",
-			description = description,
-			type = name or "enum",
-			suggestions = function()
-				local suggestions = {}
-				for key in map do
-					table.insert(suggestions, { text = key, display = key })
+--[=[
+Automatically converts a type into a plural form, optionally accepting
+additional type information.
+]=]
+local function pluralize<T>(
+	type: language.StrangeType,
+	additional: {
+		suggestions: language.Type | ((unknown) -> { language.Suggestion })?,
+		match: ((unknown) -> boolean)?,
+		convert: ((unknown) -> T)?,
+	}?
+): language.Type
+	local additional_type
+
+	local native_type = register_strange_type {
+		type = `{type.type}s`,
+		id = `__pluralize_{type.id}_native`,
+
+		convert = if type.convert
+			then function(value: unknown): unknown
+				if typeof(value) == "table" then
+					local copy = {}
+					for idx, value in ipairs(value :: any) do
+						copy[idx] = type.convert(value)
+					end
+					return copy
+				else
+					return { type.convert(value) }
 				end
-				return suggestions
-			end,
+			end
+			else nil,
+		match = {
+			kind = "union",
+			fields = {
+				type,
+				{
+					kind = "table",
+					indexer = number_type,
+					value = type,
+				},
+			},
+		} :: language.UnionType,
+		suggestions = {
+			kind = "union",
+			fields = {
+				type,
+				{
+					kind = "table",
+					indexer = number_type,
+					value = type,
+				},
+			},
+		} :: language.UnionType,
+	}
+
+	if additional then
+		additional_type = register_strange_type {
+			type = `{type.type}s`,
+			id = `__pluralize_{type.id}`,
+
+			convert = additional.convert,
+			match = additional.match,
+			suggestions = additional.suggestions,
+		}
+	end
+
+	return if additional_type
+		then {
+			kind = "union",
+			fields = {
+				if additional_type then additional_type else nil :: any,
+				native_type,
+			},
+		}
+		else native_type
+end
+
+local numbers_type = pluralize(number_type)
+local strings_type = pluralize(string_type)
+local booleans_type = pluralize(boolean_type)
+local vectors_type = pluralize(vector_type)
+
+local players_type = pluralize(player_type, {
+	convert = function(v: unknown)
+		if v == "@a" then
+			return Players:GetPlayers()
+		else
+			error(`could not convert "{typeof(v)}" into players`)
+		end
+	end,
+
+	suggestions = function(v: unknown): { language.Suggestion }
+		return {
+			{
+				kind = nil,
+				metadata = {
+					name = "all players",
+					description = "Refers to all players in the server",
+				},
+				text = "@a",
+				display = "@a (all)",
+			},
+		}
+	end,
+
+	match = function(v: unknown) return typeof(v) == "string" end,
+})
+
+-- modifiers
+
+local function opt<T>(arg: T): T
+	local type = arg :: language.CommandArgument
+
+	return {
+		kind = type.kind,
+		name = type.name,
+		description = type.description,
+		type = {
+			kind = "union" :: "union",
+			fields = {
+				{
+					kind = "literal" :: "literal",
+					value = nil,
+				},
+				type.type :: language.Type,
+			},
 		},
+		varargs = type.varargs,
 	}
 end
 
+local function variadic<T>(arg: T): ...T
+	local type = arg :: language.CommandArgument
+
+	return {
+		kind = type.kind,
+		name = type.name,
+		description = type.description,
+		type = type.type,
+		varargs = true,
+	}
+end
+
+type function GenStruct(t: type, indexer: type, value: type)
+	if indexer.tag == "generic" or value.tag == "generic" then return t end
+	t:setindexer(indexer, value)
+	return t
+end
+
 --[=[
-Generates a new enum that can be passed to conch.register_type
+Given a table, creates a type that requires it to match the table
 ]=]
-local function enum_new<T>(
-	options: { T },
-	name: string?,
-	description: string?
-): types.ArgumentType<T>
-	local map = {}
+local function struct<T, Indexer, Value>(input: T, indexer: Indexer?, value: Value?): GenStruct<T, Indexer, Value>
+	local fields: { [language.LiteralType]: language.Type } = {}
 
-	for _, value in options do
-		map[tostring(value)] = value
-	end
-
-	return enum_map(map, name, description)
-end
-
-local function convert_arg_to_player(arg: unknown): Player
-	local ctx = context.get_command_context()
-	if arg == "@s" then
-		return ctx and ctx.executor.player or error "not executed by a player"
-	elseif typeof(arg) == "number" then
-		local player = assert(
-			Players:GetPlayerByUserId(arg),
-			`player with id {arg} is not in this server`
-		)
-		return player
-	elseif typeof(arg) == "string" then
-		local player = assert(
-			Players:FindFirstChild(arg) :: Player,
-			`player "{arg}" is not valid`
-		)
-		return player
-	elseif typeof(arg) == "Instance" and arg:IsA "Player" then
-		return arg
-	else
-		error(`unknown arg {arg}`)
-	end
-end
-
-local function convert_arg_to_players(arg: unknown)
-	if arg == "@a" then
-		return Players:GetPlayers()
-	elseif typeof(arg) == "table" then
-		local copy = table.clone(arg)
-
-		for idx, plr in copy do
-			copy[idx] = convert_arg_to_player(plr)
+	for key: any, value: any in pairs(input) do
+		if value.kind == "argument" then
+			value = value.type
 		end
-
-		return copy
-	else
-		return { convert_arg_to_player(arg) }
-	end
-end
-
-local playerT: types.ArgumentType<Player> = {
-	convert = function(player) return convert_arg_to_player(player) end,
-
-	analysis = {
-		kind = "argument",
-		optional = false,
-		vararg = false,
-		name = "player",
-		type = "Player",
-		suggestions = function()
-			local suggestions = {}
-
-			table.insert(suggestions, {
-				text = "@s",
-				display = "@s (self)",
-			})
-
-			for _, player in Players:GetPlayers() do
-				table.insert(suggestions, {
-					text = player.Name,
-					display = `{player.DisplayName} (@{player.Name})`,
-				})
-			end
-
-			return suggestions
-		end,
-	},
-}
-
-local playersT: types.ArgumentType<{ Player }> = {
-	convert = function(players) return convert_arg_to_players(players) end,
-
-	analysis = {
-		kind = "argument",
-		optional = false,
-		name = "players",
-		vararg = false,
-		type = "{ Player }",
-		suggestions = function(text: string)
-			local suggestions = {}
-
-			table.insert(suggestions, {
-				text = "@a",
-				display = "@a (all)",
-			})
-			table.insert(suggestions, {
-				text = "@s",
-				display = "@s (self)",
-			})
-
-			for _, player in Players:GetPlayers() do
-				table.insert(suggestions, {
-					text = player.Name,
-					display = `{player.DisplayName} (@{player.Name})`,
-				})
-			end
-
-			return suggestions
-		end,
-	},
-}
-
-local function convert_arg_to_userid(arg: unknown): number
-	local ctx = context.get_command_context()
-	if arg == "@s" then
-		return ctx and ctx.executor.player and ctx.executor.player.UserId
-			or error "not executed by a proyer"
-	elseif typeof(arg) == "number" then
-		local ok, result = pcall(
-			function() return Players:GetNameFromUserIdAsync(arg) end
-		)
-
-		if not ok and result:find "Unknown User" then
-			error(`No user found with UserId {arg}`, 0)
+		
+		if key.kind == "argument" then
+			key = key.type
 		end
-
-		return arg
-	elseif typeof(arg) == "string" then
-		local player = Players:FindFirstChild(arg)
-
-		if not player then
-			local ok, result = pcall(
-				function() return Players:GetUserIdFromNameAsync(arg) end
-			)
-
-			if not ok and (result :: any):find "Unknown User" then
-				error(`No user found with name {arg}`, 0)
-			else
-				error(`Could not fetch player name, try again later: {arg}`, 0)
-			end
-
-			return result
-		end
-
-		assert(player:IsA "Player")
-
-		return player.UserId
-	elseif typeof(arg) == "Instance" and arg:IsA "Player" then
-		return arg.UserId
-	else
-		error(`unknown arg {arg}`, 0)
+		
+		fields[{
+			kind = "literal",
+			value = key
+		} :: any] = value  :: any
 	end
-end
+	
+	local table_type: language.TableType = {
+		kind = "table",
+		
+		fields = fields,
+		indexer = if indexer and indexer.kind == "argument" then indexer.type else indexer,
+		value = if value and value.kind == "argument" then value.type else indexer
+	}
 
-local function convert_arg_to_userids(arg: unknown)
-	if arg == "@a" then arg = Players:GetPlayers() :: any end
-
-	if typeof(arg) == "table" then
-		local copy = {}
-
-		for idx, plr in copy do
-			copy[idx] = convert_arg_to_userid(plr)
-		end
-
-		return copy
-	else
-		return { convert_arg_to_userid(arg) }
-	end
-end
-
-local useridT: types.ArgumentType<number> = {
-	convert = function(player) return convert_arg_to_userid(player) end,
-
-	analysis = {
-		kind = "argument",
-		optional = false,
-		name = "userid",
-		type = "number",
-		vararg = false,
-		suggestions = function()
-			local suggestions = {}
-
-			table.insert(suggestions, {
-				text = "@s",
-				display = "@s (self)",
-			})
-
-			for _, player in Players:GetPlayers() do
-				table.insert(suggestions, {
-					text = player.Name,
-					display = `{player.DisplayName} (@{player.Name})`,
-				})
-			end
-
-			return suggestions
-		end,
-	},
-}
-
-local useridsT: types.ArgumentType<{ number }> = {
-	convert = function(players) return convert_arg_to_userids(players) end,
-
-	analysis = {
-		kind = "argument",
-		optional = false,
-		name = "userids",
-		type = "{ number }",
-		vararg = false,
-		suggestions = function()
-			local suggestions = {}
-
-			table.insert(suggestions, {
-				text = "@s",
-				display = "@s (self)",
-			})
-			table.insert(suggestions, {
-				text = "@a",
-				display = "@a (all)",
-			})
-
-			for _, player in Players:GetPlayers() do
-				table.insert(suggestions, {
-					text = player.Name,
-					display = `{player.DisplayName} (@{player.Name})`,
-				})
-			end
-
-			return suggestions
-		end,
-	},
-}
-
-local color3T: types.ArgumentType<Color3> = {
-	convert = function(color: unknown): Color3
-		return if typeof(color) == "Color3"
-			then color
-			elseif typeof(color) == "string" then Color3.fromHex(color)
-			elseif type(color) == "vector" then Color3.fromRGB(
-				color.x,
-				color.y,
-				color.z
-			)
-			else error(`cannot convert {typeof(color)} into color3`, 0)
-	end,
-
-	analysis = {
-		kind = "argument",
-		optional = false,
-		vararg = false,
-		name = "Color3",
-		type = "Color3",
-	},
-}
-
-local color3sT: types.ArgumentType<{ Color3 }> = {
-	convert = function(color: unknown): { Color3 }
-		return if typeof(color) == "Color3"
-			then color
-			elseif typeof(color) == "string" then Color3.fromHex(color)
-			elseif type(color) == "vector" then Color3.fromRGB(
-				color.x,
-				color.y,
-				color.z
-			)
-			elseif typeof(color) == "table" then (function()
-				local t: { Color3 } = {}
-
-				for idx, v in color do
-					local value = if typeof(v) == "Color3"
-						then color
-						elseif typeof(v) == "string" then Color3.fromHex(v)
-						elseif typeof(v) == "Vector3" then Color3.fromRGB(
-							v.X,
-							v.Y,
-							v.Z
-						)
-						else error(
-							`cannot convert {typeof(color)} into color3`,
-							0
-						)
-
-					table.insert(t, value)
-				end
-
-				return t
-			end)()
-			else error(`cannot convert {typeof(color)} into color3`, 0)
-	end,
-
-	analysis = {
-		kind = "argument",
-		optional = false,
-		vararg = false,
-		name = "Color3",
-		type = "Color3",
-	},
-}
-
-local DURATION_TIMES: { [string]: number } = {
-	ms = 1e-3,
-	milisecond = 1e-3,
-	miliseconds = 1e-3,
-
-	s = 1,
-	sec = 1,
-	second = 1,
-	seconds = 1,
-
-	min = 60,
-	minute = 60,
-	minutes = 60,
-
-	hr = 60 * 60,
-	hour = 60 * 60,
-	hours = 60 * 60,
-
-	d = 60 * 60 * 24,
-	day = 60 * 60 * 24,
-	days = 60 * 60 * 24,
-
-	wk = 60 * 60 * 24 * 7,
-	week = 60 * 60 * 24 * 7,
-	weeks = 60 * 60 * 24 * 7,
-
-	mo = 60 * 60 * 24 * 30,
-	month = 60 * 60 * 24 * 30,
-	months = 60 * 60 * 24 * 30,
-
-	y = 60 * 60 * 24 * 365,
-	yr = 60 * 60 * 24 * 365,
-	year = 60 * 60 * 24 * 365,
-	years = 60 * 60 * 24 * 365,
-}
-
-local function parse_duration(text: unknown)
-	if typeof(text) ~= "string" then error "cannot parse non string" end
-
-	local words = string.split(text, " ")
-	local n = 0
-
-	for _, word in words do
-		local duration_string, suffix = string.match(word, `(.-)[%s]?([A-z]+)$`)
-		if duration_string and suffix then
-			local mul = DURATION_TIMES[suffix]
-			if not mul then error(`"{mul}" is not a valid suffix`, 0) end
-			local duration = tonumber(duration_string)
-			if not duration then
-				error(`could not convert "{word}" into a duration`, 0)
-			end
-			n += duration * mul
-		else
-			local duration = tonumber(word)
-			if not duration then
-				error(`could not convert "{word}" into a duration`, 0)
-			end
-			n += duration
-		end
-	end
-
-	return n
-end
-
-local durationT: types.ArgumentType<number> = {
-	convert = function(n: unknown): number
-		return if typeof(n) == "number" then n else parse_duration(n)
-	end,
-
-	analysis = {
-		kind = "argument",
-		optional = false,
-		vararg = false,
-		name = "duration",
-		type = "number",
-
-		suggestions = function(text: string)
-			local words = string.split(text:gsub(`"(.*)"`, "%1"), " ")
-			local last_word = words[#words] or "1"
-
-			local suggestions: { language.Suggestion } = {}
-			local the_rest = table.concat(words, " ", 1, #words - 1)
-			local before, suffix = string.match(last_word, "(.-)([A-z]+)$")
-
-			if suffix then
-				for example_suffix in DURATION_TIMES do
-					table.insert(suggestions, {
-						text = `{before}{example_suffix}`,
-						display = `{before}{example_suffix}`,
-					})
-				end
-			else
-				for example_suffix in DURATION_TIMES do
-					table.insert(suggestions, {
-						text = `{last_word}{example_suffix}`,
-						display = `{last_word}{example_suffix}`,
-					})
-				end
-			end
-
-			the_rest = if #the_rest > 0 then `{the_rest} ` else the_rest
-			for idx, s in suggestions do
-				suggestions[idx] = {
-					text = `{the_rest}{s.text}`,
-					display = `{the_rest}{s.display}`,
-				}
-			end
-
-			return suggestions
-		end,
-	},
-}
-
-local function generate_names_for_enum(enum: Enum)
-	local map = {}
-
-	for _, item: EnumItem in enum:GetEnumItems() do
-		map[item.Name] = item
-	end
-
-	return enum_map(map, tostring(enum))
-end
-
-type G<T> = (name: string?, description: string?) -> T
-
-local function variadic<T>(argument: T): ...T
-	local a: language.AnalysisArgument = argument :: any
-	assert(a.kind == "argument")
-	a.vararg = true
-	return a
-end
-
-local function optional<T>(argument: T): T | nil
-	local a: language.AnalysisArgument = argument :: any
-	a.optional = true
-	return a
-end
-
-local function literal<T>(value: T, name: string?, description: string?): T
 	return {
-		kind = "literal",
-		name = name or "",
-		description = description or "",
-		value = value,
-		optional = false,
+		kind = "argument",
+		name = "table",
+		description = "",
+
+		type = table_type,
+		varargs = false
 	} :: any
 end
 
-local function overload<T>(
-	p: { { description: string, arguments: { any } } }
-): ...any
-	return {
-		kind = "overload",
-		overloads = p,
-	} :: any
-end
+local args = {
+	any = wrap_type(any_type, "any"),
+	number = wrap_type(number_type, "number"),
+	string = wrap_type(string_type, "string"),
+	boolean = wrap_type(boolean_type, "boolean"),
+	vector = wrap_type(vector_type, "vector"),
+
+	player = wrap_type(player_type, "player"),
+	players = wrap_type(players_type, "players"),
+
+	enum_from_array = enum_from_array,
+	enum_from_map = enum_from_map,
+
+	opt = opt,
+	variadic = variadic,
+
+	struct = struct
+}
 
 return {
+	wrap_type = wrap_type,
+	register_strange_type = register_strange_type,
+	get_strange_type = get_strange_type,
+	pluralize = pluralize,
+	obtain_type_name = obtain_type_name,
 
-	overload = overload,
-	literal = literal,
+	type = {
+		any = any_type,
+		number = number_type,
+		string = string_type,
+		boolean = boolean_type,
+		vector = vector_type,
+		player = player_type,
 
-	any = console.register_type("any", anyT),
-	string = console.register_type("string", stringT) :: G<string>,
-	strings = console.register_type("strings", stringsT) :: G<{ string }>,
-	number = console.register_type("number", numberT) :: G<number>,
-	numbers = console.register_type("numbers", numbersT) :: G<{ number }>,
-	boolean = console.register_type("boolean", booleanT) :: G<boolean>,
-	booleans = console.register_type("booleans", booleansT) :: G<{ boolean }>,
-	table = console.register_type("table", tableT) :: G<{}>,
-	vector = console.register_type("vector", vectorT) :: G<vector>,
-	vectors = console.register_type("vectors", vectorsT) :: G<{ vector }>,
-	player = console.register_type("player", playerT) :: G<Player>,
-	players = console.register_type("players", playersT) :: G<{ Player }>,
+		numbers = numbers_type,
+		strings = strings_type,
+		booleans = booleans_type,
+		vectors = vectors_type,
+		players = players_type,
+	},
 
-	userid = console.register_type("userid", useridT) :: G<number>,
-	userids = console.register_type("userids", useridsT) :: G<{ number }>,
-
-	color = console.register_type("color", color3T) :: G<Color3>,
-	colors = console.register_type("colors", color3sT) :: G<{ Color3 }>,
-
-	duration = console.register_type("duration", durationT) :: G<number>,
-
-	userinput = console.register_type(
-		"userinput",
-		generate_names_for_enum(Enum.UserInputType)
-	) :: G<Enum.UserInputType>,
-
-	variadic = variadic,
-	optional = optional,
-	opt = optional,
-
-	enum_new = enum_new,
-	enum_map = enum_map,
+	args = args,
 }

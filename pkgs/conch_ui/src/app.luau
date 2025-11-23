@@ -30,7 +30,7 @@ return function()
 			value.text = `\27[1;46;310mINF\27[0;36m {value.text}\27[0m`
 		end
 
-		state.logs:write(buffer.fromstring(value.text))
+		state.logs:write(buffer.fromstring(tostring(value.text)))
 	end
 
 	conch.console.output = output
@@ -125,8 +125,10 @@ return function()
 				continue
 			end
 
-			local score =
-				levenshtein_distance(input, string.lower(suggestion.display))
+			local score = levenshtein_distance(
+				string.lower(input),
+				string.lower(suggestion.display)
+			)
 			if score == -math.huge then continue end
 			table.insert(
 				filtered_suggestions,

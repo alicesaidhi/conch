@@ -4,13 +4,21 @@ local treewalker = require "@self/treewalker"
 
 export type LanguageVm = analyze.LanguageVm
 export type TypeAnalysisInfo = analyze.TypeAnalysisInfo
+
 export type SimpleValue = analyze.SimpleValue
-export type Overload = analyze.Overload
 export type Suggestion = analyze.Suggestion
 export type Metadata = analyze.Metadata
-export type AnalysisArgument = analyze.AnalysisArgument
-export type AnalysisResult = analyze.AnalysisResult
-export type AnalysisInputState = analyze.AnalysisInputState
+export type Type = analyze.Type
+export type LiteralType = analyze.LiteralType
+export type StrangeType = analyze.StrangeType
+export type UnionType = analyze.UnionType
+export type IntersectionType = analyze.IntersectionType
+export type TableType = analyze.TableType
+export type FunctionType = analyze.FunctionType
+export type CommandType = analyze.CommandType
+export type CommandArgument = analyze.CommandArgument
+export type AnalysisResult = analyze.Result
+export type InputState = analyze.InputState
 
 -----
 
@@ -54,13 +62,18 @@ local function set_variable(vm: LanguageVm, key: string, value: unknown)
 	vm.state.scope.vars[key] = value
 end
 
-local function attach_info(vm: LanguageVm, metadata: Metadata): TypeAnalysisInfo
-	if metadata.is_var then
-		vm.vars_metadata[metadata.key] = metadata
-		return { remove = function() vm.vars_metadata[metadata.key] = nil end }
+local function attach_info(
+	vm: LanguageVm,
+	is_var: boolean,
+	key: string,
+	value: Type
+): TypeAnalysisInfo
+	if is_var then
+		vm.vars_metadata[key] = value
+		return { remove = function() vm.vars_metadata[key] = nil end }
 	else
-		vm.global_metadata[metadata.key] = metadata
-		return { remove = function() vm.global_metadata[metadata.key] = nil end }
+		vm.global_metadata[key] = value
+		return { remove = function() vm.global_metadata[key] = nil end }
 	end
 end
 
@@ -90,8 +103,8 @@ local function run(vm: LanguageVm, input: string): RunResult
 	end
 end
 
-local language: LanguageInterface = {
-	version = "0.3.2",
+local language = {
+	version = "0.4.0",
 
 	create_vm = create_vm,
 
@@ -101,7 +114,8 @@ local language: LanguageInterface = {
 	attach_info = attach_info,
 
 	run = run,
-	analyze = analyze,
+	analyze = analyze.analyze,
+	matches_type = analyze.matches_type,
 }
 
 return language

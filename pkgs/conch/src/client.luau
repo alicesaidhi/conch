@@ -1,6 +1,7 @@
 --!strict
 local Players = game:GetService "Players"
 
+local arguments = require "./arguments"
 local console = require "./console"
 local language = require "../roblox_packages/language"
 local net = require "./net"
@@ -83,33 +84,54 @@ local function update_role_permissions(data: net.UpdateRolePacket)
 	end
 end
 
-local function register_command(data: net.RegisterCommandPacket)
-	-- warn("NEW SERVER COMMAND", data.name)
-	local arguments: types.Overload =
-		{ kind = "overload", overloads = data.overloads }
+-- given a language type, fills al types automatically
+local function fill_types(data: language.Type?)
+	if not data then
+		return
+	elseif data.kind == "command" then
+		for _, value in data.arguments do
+			fill_types(value.type)
+		end
+	elseif data.kind == "function" then
+		return
+	elseif data.kind == "intersection" then
+		for _, field in data.fields do
+			fill_types(field)
+		end
+	elseif data.kind == "literal" then
+		return
+	elseif data.kind == "strange" then
+		local type_data = arguments.get_strange_type(data.id)
+		if type_data == nil then
+			return warn(`{data.type} {data.id} is unregistered`)
+		end
 
-	for _, overload in arguments.overloads do
-		for idx, argument in overload.arguments do
-			if argument.kind == "literal" then continue end
-			local type = console.get_type(argument.unique_identifier)
-			if not type then
-				warn("unregistered type", type)
-				return
+		-- forcefully overwrite the type; this is fine because replication deepclones
+		(data :: any).match = type_data.match;
+		(data :: any).suggestions = type_data.suggestions
+	elseif data.kind == "table" then
+		fill_types(data.indexer)
+		fill_types(data.value)
+
+		if data.fields then
+			for key, value in data.fields do
+				fill_types(key)
+				fill_types(value)
 			end
-			local copy: any = table.clone(type.analysis)
-			copy.name = argument.name
-			copy.description = argument.description
-			copy.optional = argument.optional
-			copy.type = argument.type
-			if copy.kind == "argument" then copy.vararg = argument.vararg end
-			overload.arguments[idx] = copy
 		end
 	end
+end
+
+local function register_command(data: net.RegisterCommandPacket)
+	-- warn("NEW SERVER COMMAND", data.name)
+	fill_types(data.type)
+
+	assert(data.type.kind == "command")
 
 	console.register_command(data.name, {
 		description = data.description,
 		permissions = data.permissions,
-		arguments = function() return arguments end :: any,
+		arguments = function() return unpack(data.type.arguments) end :: any,
 
 		callback = function(...)
 			local thread = coroutine.running()

@@ -6,6 +6,7 @@ local bootstrap = require "@self/bootstrap"
 local client = require "@self/client"
 local console = require "@self/console"
 local context = require "@self/context"
+local language = require "./roblox_packages/language"
 local net = require "@self/net"
 local state = require "@self/state"
 local types = require "@self/types"
@@ -14,6 +15,7 @@ local user = require "@self/user"
 export type Log = types.Log
 export type CommandContext = types.CommandContext
 export type Stream = types.Stream
+export type CommandArgument = language.CommandArgument
 
 local IS_SERVER = RunService:IsServer()
 local IS_CLIENT = RunService:IsClient()
@@ -46,8 +48,9 @@ local function initiate_user_replication(user: types.User)
 
 		net.server.fire_register_command(user.player, {
 			name = command.name,
+			description = command.description,
 			permissions = command.permissions,
-			overloads = command.information.overloads,
+			type = command.type,
 		})
 	end
 end
@@ -200,7 +203,11 @@ return {
 
 	version = "0.4.0",
 
-	args = arguments,
+	args = arguments.args,
+	get_strange_type = arguments.get_strange_type,
+	register_strange_type = arguments.register_strange_type,
+	pluralize_type = arguments.pluralize,
+	wrap_type = arguments.wrap_type,
 
 	execute = function(text: string)
 		local local_user = state.local_user
@@ -246,8 +253,6 @@ return {
 
 	get_command_context = get_command_context,
 
-	register_type = console.register_type,
-
 	log = function(kind: "warn" | "info" | "error" | "normal", text: string)
 		if IS_SERVER then
 			local context = state.command_context[coroutine.running()]
@@ -278,6 +283,7 @@ return {
 	analyze = console.analyze,
 
 	_ = {
+		type = arguments.type,
 
 		create_user = user.create_user,
 		disconnect_user = user.disconnect_user,
