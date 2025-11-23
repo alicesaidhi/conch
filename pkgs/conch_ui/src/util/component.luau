@@ -14,20 +14,12 @@ type Child = Instance | Array<Child> | () -> Child
 type FlexProperties = {
 	direction: "column" | "row"?,
 	sort: "order" | "name"?,
-	justify: Can<"center"
-		| "left"
-		| "right"
-		| "around"
-		| "between"
-		| "even"
-		| "fill">?,
-	align: Can<"center"
-		| "top"
-		| "bottom"
-		| "around"
-		| "between"
-		| "even"
-		| "fill">?,
+	justify: Can<
+		"center" | "left" | "right" | "around" | "between" | "even" | "fill"
+	>?,
+	align: Can<
+		"center" | "top" | "bottom" | "around" | "between" | "even" | "fill"
+	>?,
 	wrap: boolean?,
 	pad: number?,
 }
@@ -298,8 +290,7 @@ local function component<Object, Properties>(
 				local ys = vide.read(hs)
 
 				if not x or not y or not xs or not ys then return end
-				local size =
-					UDim2.new(xs, x, ys, y);
+				local size = UDim2.new(xs, x, ys, y);
 				(instance :: GuiObject).Size = size
 			end)
 		end

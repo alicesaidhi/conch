@@ -89,7 +89,7 @@ local function register_strange_type<T>(p: {
 
 		suggestions = p.suggestions,
 		match = p.match,
-		exact_match = p.exact_match
+		exact_match = p.exact_match,
 	}
 
 	stored_types[p.id] = strange_type
@@ -156,7 +156,9 @@ local function generate_dynamic_options<K, V>(
 
 			if value == nil then
 				return error(
-					`could not convert "{tostring(key)}" into a valid option, expected something like {(next(fn()))}`
+					`could not convert "{tostring(key)}" into a valid option, expected something like {(next(
+						fn()
+					))}`
 				)
 			else
 				return value
@@ -182,9 +184,7 @@ local function generate_dynamic_options<K, V>(
 
 			return suggestions
 		end,
-		exact_match = function(key)
-			return fn()[key] ~= nil
-		end
+		exact_match = function(key) return fn()[key] ~= nil end,
 	}
 
 	return wrap_type(strange_type, name, description)
@@ -237,7 +237,7 @@ local any_type = register_strange_type {
 	convert = nil,
 	match = nil,
 	suggestions = nil,
-	exact_match = nil
+	exact_match = nil,
 }
 
 local number_type = register_strange_type {
@@ -710,7 +710,7 @@ local function pluralize<T>(
 				},
 			},
 		} :: language.UnionType,
-		exact_match = nil
+		exact_match = nil,
 	}
 
 	if additional then
@@ -721,7 +721,7 @@ local function pluralize<T>(
 			convert = additional.convert,
 			match = additional.match,
 			suggestions = additional.suggestions,
-			exact_match = additional.exact_match
+			exact_match = additional.exact_match,
 		}
 	end
 

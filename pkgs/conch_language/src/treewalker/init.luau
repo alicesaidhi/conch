@@ -4,26 +4,30 @@ type Node = {
 	read span: vector,
 }
 
-export type Scope = {
-	up: Scope?,
-	root: true,
-	vars: { [string]: unknown },
-} | {
-	up: Scope,
-	root: false,
-	vars: { [string]: unknown },
-}
+export type Scope =
+	{
+		up: Scope?,
+		root: true,
+		vars: { [string]: unknown },
+	}
+	| {
+		up: Scope,
+		root: false,
+		vars: { [string]: unknown },
+	}
 
-export type Trace = | {
-	read fn: (...any) -> (),
-	read fn_name: string?,
-	read origin: "luau",
-} | {
-	read fn: (...any) -> (),
-	read fn_name: string?,
-	read origin: "conch",
-	read line: number,
-}
+export type Trace =
+	| {
+		read fn: (...any) -> (),
+		read fn_name: string?,
+		read origin: "luau",
+	}
+	| {
+		read fn: (...any) -> (),
+		read fn_name: string?,
+		read origin: "conch",
+		read line: number,
+	}
 
 export type ExecutionState = {
 	globals: { [string]: unknown },
@@ -34,13 +38,15 @@ export type ExecutionState = {
 
 type Expression = ast.Expression | ast.ExpressionCommand
 
-export type ExecutionResult = {
-	ok: true,
-	values: nil | { unknown },
-} | {
-	ok: false,
-	err: string,
-}
+export type ExecutionResult =
+	{
+		ok: true,
+		values: nil | { unknown },
+	}
+	| {
+		ok: false,
+		err: string,
+	}
 
 local using_machine: { [thread]: ExecutionState } = setmetatable(
 	{},
