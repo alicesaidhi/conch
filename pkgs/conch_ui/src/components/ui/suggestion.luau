@@ -55,7 +55,9 @@ return component(function(
 	local show_suggestions_from = source(p.selected())
 	local additional_info = function()
 		local suggestion = p.suggestions()[p.selected()]
-		if not suggestion then return p.result().additional_info end
+		if not suggestion or suggestion.metadata == nil then
+			return p.result().additional_info
+		end
 		return suggestion.metadata
 	end
 
@@ -162,9 +164,7 @@ return component(function(
 
 					text {
 						text = function()
-							return `{result().type}{if result().optional
-								then "?"
-								else ""}` or ""
+							return `{result().type}` or ""
 						end,
 						size = 18,
 						weight = 400,

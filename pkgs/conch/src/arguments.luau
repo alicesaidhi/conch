@@ -425,6 +425,7 @@ local player_type = register_strange_type {
 			metadata = {
 				name = "self",
 				description = "Refers to yourself",
+				type = "player"
 			},
 			text = "@s",
 			display = "@s (self)",
@@ -493,6 +494,7 @@ local userid_type = register_strange_type {
 			metadata = {
 				name = "self",
 				description = "Refers to yourself",
+				type = "player"
 			},
 			text = "@s",
 			display = "@s (self)",
@@ -757,6 +759,7 @@ local players_type = pluralize(player_type, {
 				metadata = {
 					name = "all players",
 					description = "Refers to all players in the server",
+					type = "players"
 				},
 				text = "@a",
 				display = "@a (all)",
@@ -791,6 +794,7 @@ local userids_type = pluralize(userid_type, {
 				metadata = {
 					name = "all players",
 					description = "Refers to all players in the server",
+					type = "players"
 				},
 				text = "@a",
 				display = "@a (all)",

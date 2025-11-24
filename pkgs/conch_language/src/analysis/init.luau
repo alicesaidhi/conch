@@ -4,6 +4,7 @@ local treewalker = require "./treewalker"
 export type Metadata = {
 	read name: string,
 	read description: string,
+	read type: string,
 }
 export type LanguageVm = {
 	global_metadata: { [string]: Type },
@@ -321,6 +322,7 @@ local function get_metadata_for(node: Type): Metadata?
 		return {
 			name = node.name,
 			description = node.description or "",
+			type = "Command",
 		}
 	else
 		return nil
@@ -853,7 +855,9 @@ local function complete_command(
 		additional_info = {
 			name = arg_type.name,
 			description = arg_type.description,
-			type = if arg_type.type then arg_type.type.kind else "unknown",
+			type = if arg_type.type
+				then get_type_name(arg_type.type)
+				else "unknown",
 		},
 	}
 
