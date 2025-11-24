@@ -128,6 +128,20 @@ local scanned_tomls: { [string]: PesdeToml } = {}
 
 local function fix(name: string) return string.gsub(name, "_", "-") end
 
+local map_pesde = {}
+for _, dependency in fs.readDir "pkgs" do
+	if dependency:match "_foreign_" then
+		fs.removeDir(`pkgs/{dependency}`)
+	else
+		local pesde: PesdeToml =
+			serde.decode("toml", fs.readFile(`pkgs/{dependency}/pesde.toml`))
+		local name = string.match(pesde.name, ".-/(.*)")
+		map_pesde[name] = dependency
+
+		pcall(fs.removeDir, `pkgs/{dependency}/roblox_packages`)
+	end
+end
+
 local function generate_wally_release_files(path: string)
 	local file = fs.readFile(path .. "/pesde.toml")
 	local pesde_toml: PesdeToml = serde.decode("toml", file)
