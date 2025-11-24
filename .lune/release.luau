@@ -540,14 +540,14 @@ end
 
 for _, path in get_order() do
 	print("Generating release for", path)
-	-- generate_wally_release_files(path)
-	-- local status = process.spawn("wally", { "publish" }, {
-	-- 	cwd = path,
-	-- 	env = {},
-	-- 	shell = true,
-	-- })
-	-- cleanup_files(path)
-	-- if status.ok == false then error(status.stderr) end
+	generate_wally_release_files(path)
+	local status = process.spawn("wally", { "publish" }, {
+		cwd = path,
+		env = {},
+		shell = true,
+	})
+	cleanup_files(path)
+	if status.ok == false then error(status.stderr) end
 
 	-- link_npm_files(path)
 	-- local status = process.spawn("pnpm", { "publish", "--access=public" }, {
@@ -556,5 +556,5 @@ for _, path in get_order() do
 	-- 	shell = true,
 	-- })
 	cleanup_files(path)
-	-- if status.ok == false then error(status.stderr) end
+	if status.ok == false then error(status.stderr) end
 end

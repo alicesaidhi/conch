@@ -48,7 +48,7 @@ return function()
 		description = "Clears the console.",
 		permissions = {},
 		arguments = function() end,
-		callback = function() state.logs {} end,
+		callback = function() state.current_stream():clear() end,
 	})
 
 	conch.register("ansi", {

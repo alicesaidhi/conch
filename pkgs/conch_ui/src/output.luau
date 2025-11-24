@@ -46,6 +46,7 @@ export type Stream = {
 	richtext: buffer,
 
 	write: (Stream, buffer) -> (),
+	clear: (Stream) -> (),
 
 	getformatted: (Stream, from: number) -> string,
 }
@@ -593,18 +594,29 @@ local function view_from(self: Stream, line_from: number)
 	return buffer.readstring(b, 0, at)
 end
 
+local function clear(self: Stream)
+	self.active_tags = {}
+	self.at = 0
+	self.chars_left = self.max_line_length
+	self.richtext = buffer.create(0)
+	self.richtext_lines = { 0 }
+	self.start_tags_per_line = { {} }
+end
+
 local function create_stream(): Stream
 	return {
 		active_tags = {},
 		at = 0,
 		chars_left = 120,
-		max_line_length = 120,
 		richtext = buffer.create(0),
 		richtext_lines = { 0 },
 		start_tags_per_line = { {} },
+
 		visible_lines = 160,
+		max_line_length = 120,
 
 		write = write,
+		clear = clear,
 		getformatted = view_from,
 	}
 end
