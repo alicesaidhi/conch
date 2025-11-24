@@ -1,4 +1,3 @@
-local analysis = require "../../conch_language/src/analysis"
 local language = require "../roblox_packages/language"
 
 export type TypeRegistrator<T> = (name: string?, description: string?) -> T
