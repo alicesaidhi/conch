@@ -385,7 +385,7 @@ local function get_focused_argument(
 	state: InputState,
 	node: ast.Command
 ): number
-	local current_command_argument = 0
+	local current_command_argument = 1
 
 	-- obtains the current focused argument
 	for idx, argument in node.arguments do
