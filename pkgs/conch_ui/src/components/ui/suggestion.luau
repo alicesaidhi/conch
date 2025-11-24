@@ -62,7 +62,8 @@ return component(function(
 	end
 
 	effect(function()
-		local selected = p.selected()
+		local selected =
+			math.clamp(p.selected(), 1, math.max(1, #p.suggestions()))
 		local min, max =
 			show_suggestions_from(),
 			show_suggestions_from() + TOTAL_SUGGESTIONS - 1

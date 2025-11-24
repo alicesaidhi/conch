@@ -128,19 +128,19 @@ local scanned_tomls: { [string]: PesdeToml } = {}
 
 local function fix(name: string) return string.gsub(name, "_", "-") end
 
-local map_pesde = {}
-for _, dependency in fs.readDir "pkgs" do
-	if dependency:match "_foreign_" then
-		fs.removeDir(`pkgs/{dependency}`)
-	else
-		local pesde: PesdeToml =
-			serde.decode("toml", fs.readFile(`pkgs/{dependency}/pesde.toml`))
-		local name = string.match(pesde.name, ".-/(.*)")
-		map_pesde[name] = dependency
+-- local map_pesde = {}
+-- for _, dependency in fs.readDir "pkgs" do
+-- 	if dependency:match "_foreign_" then
+-- 		fs.removeDir(`pkgs/{dependency}`)
+-- 	else
+-- 		local pesde: PesdeToml =
+-- 			serde.decode("toml", fs.readFile(`pkgs/{dependency}/pesde.toml`))
+-- 		local name = string.match(pesde.name, ".-/(.*)")
+-- 		map_pesde[name] = dependency
 
-		pcall(fs.removeDir, `pkgs/{dependency}/roblox_packages`)
-	end
-end
+-- 		pcall(fs.removeDir, `pkgs/{dependency}/roblox_packages`)
+-- 	end
+-- end
 
 local function generate_wally_release_files(path: string)
 	local file = fs.readFile(path .. "/pesde.toml")
@@ -202,6 +202,7 @@ local function generate_wally_release_files(path: string)
 			for name, dependency in dependencies do
 				local realm = dependency.target or pesde_toml.target.environment
 				if realm ~= "roblox" then continue end
+				print(path .. "/roblox_packages/" .. name .. ".luau")
 				local file =
 					fs.readFile(path .. "/roblox_packages/" .. name .. ".luau")
 				local package_file = {
@@ -551,6 +552,8 @@ for _, path in get_order() do
 	local pesde_toml: PesdeToml = serde.decode("toml", file)
 	scanned_tomls[pesde_toml.name] = pesde_toml
 end
+
+process.spawn("pesde", { "i" })
 
 for _, path in get_order() do
 	print("Generating release for", path)

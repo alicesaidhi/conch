@@ -931,22 +931,27 @@ local function overload<T>(p: { { any } }): ...any
 end
 
 local args = {
-	any = wrap_type(any_type, "any"),
-	number = wrap_type(number_type, "number"),
-	string = wrap_type(string_type, "string"),
-	boolean = wrap_type(boolean_type, "boolean"),
-	vector = wrap_type(vector_type, "vector"),
+	any = wrap_type(any_type, "any") :: types.TypeRegistrator<any>,
+	number = wrap_type(number_type, "number") :: types.TypeRegistrator<number>,
+	string = wrap_type(string_type, "string") :: types.TypeRegistrator<string>,
+	boolean = wrap_type(boolean_type, "boolean") :: types.TypeRegistrator<boolean>,
+	vector = wrap_type(vector_type, "vector") :: types.TypeRegistrator<vector>,
 
-	color = wrap_type(color_type, "Color3"),
-	colors = wrap_type(colors_type, "Color3s"),
+	color = wrap_type(color_type, "Color3") :: types.TypeRegistrator<Color3>,
+	colors = wrap_type(colors_type, "Color3s") :: types.TypeRegistrator<{Color3}>,
 
-	userid = wrap_type(userid_type, "UserId"),
-	userids = wrap_type(userids_type, "UserIds"),
+	userid = wrap_type(userid_type, "UserId") :: types.TypeRegistrator<number>,
+	userids = wrap_type(userids_type, "UserIds") :: types.TypeRegistrator<{number}>,
 
-	duration = wrap_type(duration_type, "duration"),
+	duration = wrap_type(duration_type, "duration") :: types.TypeRegistrator<number>,
 
-	player = wrap_type(player_type, "player"),
-	players = wrap_type(players_type, "players"),
+	player = wrap_type(player_type, "player") :: types.TypeRegistrator<Player>,
+	players = wrap_type(players_type, "players") :: types.TypeRegistrator<{Player}>,
+	
+	numbers = wrap_type(numbers_type, "numbers") :: types.TypeRegistrator<{number}>,
+	strings = wrap_type(strings_type, "strings") :: types.TypeRegistrator<{string}>,
+	booleans = wrap_type(booleans_type, "booleans") :: types.TypeRegistrator<{boolean}>,
+	vectors = wrap_type(vectors_type, "vectors") :: types.TypeRegistrator<{vector}>,
 
 	enum_from_array = enum_from_array,
 	enum_from_map = enum_from_map,
@@ -962,6 +967,8 @@ local args = {
 	intersect = intersect,
 
 	overload = overload,
+
+	dynamic = generate_dynamic_options
 }
 
 return {

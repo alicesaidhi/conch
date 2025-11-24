@@ -198,7 +198,7 @@ local function coerce_value_into_type(
 
 		if type.indexer and type.value then
 			for key, value in pairs(clone) do
-				if language.matches_type(key, type.indexer) then
+				if language.matches_type(key, type.indexer, true) then
 					clone[coerce_value_into_type(type.indexer, key)] =
 						coerce_value_into_type(type.value, value)
 				end
@@ -206,7 +206,7 @@ local function coerce_value_into_type(
 		end
 	elseif type.kind == "union" then
 		for _, field in type.fields do
-			if not language.matches_type(value, field) then continue end
+			if not language.matches_type(value, field, true) then continue end
 			return coerce_value_into_type(field, value)
 		end
 	end
