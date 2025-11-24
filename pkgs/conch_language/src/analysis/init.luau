@@ -829,6 +829,7 @@ local function complete_command(
 	-- in case of varargs, set it to the varargs node.
 	if
 		current_argument_idx > #type.arguments
+		and #type.arguments ~= 0
 		and type.arguments[#type.arguments].varargs
 	then
 		arg_type = type.arguments[#type.arguments]
