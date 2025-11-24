@@ -53,6 +53,11 @@ return component(function(
 	_
 )
 	local show_suggestions_from = source(p.selected())
+	local additional_info = function()
+		local suggestion = p.suggestions()[p.selected()]
+		if not suggestion then return p.result().additional_info end
+		return suggestion.metadata
+	end
 
 	effect(function()
 		local selected = p.selected()
@@ -130,16 +135,16 @@ return component(function(
 			}
 		end),
 
-		show(function() return p.result().additional_info end, function()
-			local result = function()
-				return p.result().additional_info or {}
+		show(additional_info, function()
+			local result = function(): language.Metadata?
+				return additional_info() or {}
 			end
 
 			return background {
 				w = 300,
 				order = 10,
 				auto = "y",
-				flex = {},
+				flex = { align = "top", justify = "left" },
 				anchor = { 0, 1 },
 
 				transparency = 0,
@@ -150,7 +155,7 @@ return component(function(
 					pad = { x = 4 },
 					
 					text {
-						text = function() return result().name or "" end,
+						text = function() return result().name or "not defined" end,
 						size = 20,
 						weight = 700,
 					},
@@ -173,11 +178,10 @@ return component(function(
 					size = 16,
 					xalign = "left",
 					
-					color = theme.background,
+					color = theme.text,
 
 					text = function()
-						local analysis_result = p.result()
-						return analysis_result.additional_info and analysis_result.additional_info.description or ""
+						return result().description or "undefined"
 					end,
 				},
 			}

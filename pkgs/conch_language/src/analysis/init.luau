@@ -118,6 +118,11 @@ export type Result = {
 	replace: vector,
 	suggestions: { Suggestion },
 	issues: { ast.Issue },
+	additional_info: {
+		name: string,
+		description: string?,
+		type: string,
+	}?,
 }
 
 export type InputState = {
