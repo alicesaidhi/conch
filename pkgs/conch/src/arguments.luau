@@ -747,7 +747,7 @@ local players_type = pluralize(player_type, {
 	convert = function(v: unknown)
 		if v == "@a" then
 			return Players:GetPlayers()
-		elseif v== "@o" then
+		elseif v == "@o" then
 			local ctx = context.get_command_context()
 			if not ctx or not ctx.executor.player then return Players:GetPlayers() end
 
@@ -771,11 +771,21 @@ local players_type = pluralize(player_type, {
 				text = "@a",
 				display = "@a (all)",
 			},
+			{
+				kind = nil,
+				metadata = {
+					name = "other players",
+					description = "Refers to all players except you in the server",
+					type = "players"
+				},
+				text = "@o",
+				display = "@o (others)",
+			},
 		}
 	end,
 
 	match = function(v: unknown) return typeof(v) == "string" end,
-	exact_match = function(v: unknown) return v == "@a" end,
+	exact_match = function(v: unknown) return v == "@a" or v == "@o" end,
 })
 
 local userids_type = pluralize(userid_type, {
@@ -828,9 +838,9 @@ local function opt<T>(arg: T): T
 	local type = arg :: language.CommandArgument
 
 	return {
-		kind = type.kind,
-		name = type.name,
-		description = type.description,
+		kind = "argument",
+		name = type.name or obtain_type_name(type),
+		description = type.description or obtain_type_name(type),
 		type = {
 			kind = "union" :: "union",
 			fields = {
@@ -838,7 +848,7 @@ local function opt<T>(arg: T): T
 					kind = "literal" :: "literal",
 					value = nil,
 				},
-				type.type :: language.Type,
+				type.type or type :: language.Type,
 			},
 		},
 		varargs = type.varargs,
@@ -849,10 +859,10 @@ local function variadic<T>(arg: T): ...T
 	local type = arg :: language.CommandArgument
 
 	return {
-		kind = type.kind,
-		name = type.name,
-		description = type.description,
-		type = type.type,
+		kind = "argument",
+		name = type.name or obtain_type_name(type),
+		description = type.description or obtain_type_name(type),
+		type = type.type or type,
 		varargs = true,
 	}
 end

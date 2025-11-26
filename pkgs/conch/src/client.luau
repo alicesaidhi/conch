@@ -106,9 +106,12 @@ local function fill_types(data: language.Type?)
 			return warn(`{data.type} {data.id} is unregistered`)
 		end
 
+		print(type_data);
 		-- forcefully overwrite the type; this is fine because replication deepclones
 		(data :: any).match = type_data.match;
-		(data :: any).suggestions = type_data.suggestions
+		(data :: any).suggestions = type_data.suggestions;
+		(data :: any).exact_match = type_data.exact_match
+		-- (data :: any).convert = type_data.convert; do not handle convert cases
 	elseif data.kind == "table" then
 		fill_types(data.indexer)
 		fill_types(data.value)
@@ -118,6 +121,10 @@ local function fill_types(data: language.Type?)
 				fill_types(key)
 				fill_types(value)
 			end
+		end
+	elseif data.kind == "union" then
+		for _, field in data.fields do
+			fill_types(field)
 		end
 	end
 end
