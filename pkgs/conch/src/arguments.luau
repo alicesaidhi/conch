@@ -747,6 +747,13 @@ local players_type = pluralize(player_type, {
 	convert = function(v: unknown)
 		if v == "@a" then
 			return Players:GetPlayers()
+		elseif v== "@o" then
+			local ctx = context.get_command_context()
+			if not ctx or not ctx.executor.player then return Players:GetPlayers() end
+
+			local players = Players:GetPlayers()
+			table.remove(players, table.find(players, ctx.executor.player))
+			return players
 		else
 			error(`could not convert "{typeof(v)}" into players`)
 		end
