@@ -42,8 +42,10 @@ return component(function(p: {
 		if not state.opened() then return nil end
 
 		local stream = state.current_stream()
-		stream.visible_lines = (workspace.CurrentCamera.ViewportSize.Y / 20 - 2)
-			// 1
+		stream.max_line_length = workspace.CurrentCamera.ViewportSize.X // 9
+		stream.visible_lines = (
+			(workspace.CurrentCamera.ViewportSize.Y * 0.8) / 16 - 2
+		) // 1
 		visible_lines(stream.visible_lines)
 
 		min(stream.visible_lines)

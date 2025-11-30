@@ -206,6 +206,7 @@ return component(function(p: {
 		end, function()
 			return textbox {
 				ws = 1,
+				auto = "",
 				h = 20,
 
 				text = raw_text,
