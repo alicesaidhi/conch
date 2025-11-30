@@ -148,6 +148,8 @@ return component(function(p: {
 			and input:IsModifierKeyDown(Enum.ModifierKey.Ctrl)
 		then
 			conch.cancel()
+		elseif input.KeyCode == Enum.KeyCode.Return then
+			state.focused(true)
 		end
 	end))
 
