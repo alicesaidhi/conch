@@ -14,7 +14,7 @@ local derive = vide.derive
 local effect = vide.effect
 
 local STARTUP_TEXT = `\z
-conch-ui 0.4.0-rc.2\tconch-language {language.version}\tconch {conch.version}`
+conch-ui 0.4.0-rc.3\tconch-language {language.version}\tconch {conch.version}`
 
 local NEWLINE = buffer.create(1)
 buffer.writeu8(NEWLINE, 0, string.byte "\n")
