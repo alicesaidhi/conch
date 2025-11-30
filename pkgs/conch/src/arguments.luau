@@ -175,8 +175,8 @@ local function generate_dynamic_options<K, V>(
 
 			for key, value in fn() do
 				table.insert(suggestions, {
-					text = key,
-					display = key,
+					text = tostring(key),
+					display = tostring(key),
 					kind = nil,
 					metadata = nil,
 				})
