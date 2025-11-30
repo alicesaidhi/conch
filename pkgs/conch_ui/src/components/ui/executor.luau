@@ -180,6 +180,7 @@ return component(function(p: {
 						return suggestion_position().Y + absolute_position().Y
 					end,
 					selected = selected_suggestion,
+					show_suggestions_from = show_suggestions_from,
 
 					suggestions = p.filtered_suggestions,
 					result = p.analysis,

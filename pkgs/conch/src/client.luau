@@ -70,10 +70,6 @@ local function update_role_permissions(data: net.UpdateRolePacket)
 				unpack(command.representation.permissions or {})
 			)
 		then
-			print(
-				"setting command representation for",
-				command.representation.name
-			)
 			console.set_command_from_representation(
 				command.representation,
 				command.arguments
@@ -106,7 +102,6 @@ local function fill_types(data: language.Type?)
 			return warn(`{data.type} {data.id} is unregistered`)
 		end
 
-		print(type_data);
 		-- forcefully overwrite the type; this is fine because replication deepclones
 		(data :: any).match = type_data.match;
 		(data :: any).suggestions = type_data.suggestions;

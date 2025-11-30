@@ -48,11 +48,12 @@ return component(function(
 
 		result: () -> language.AnalysisResult,
 		suggestions: () -> { language.Suggestion },
+		show_suggestions_from: () -> number,
 		selected: () -> number,
 	},
 	_
 )
-	local show_suggestions_from = source(p.selected())
+	local show_suggestions_from = p.show_suggestions_from
 	local additional_info = function()
 		local suggestion = p.suggestions()[p.selected()]
 		if not suggestion or suggestion.metadata == nil then
@@ -60,22 +61,6 @@ return component(function(
 		end
 		return suggestion.metadata
 	end
-
-	effect(function()
-		local selected =
-			math.clamp(p.selected(), 1, math.max(1, #p.suggestions()))
-		local min, max =
-			show_suggestions_from(),
-			show_suggestions_from() + TOTAL_SUGGESTIONS - 1
-
-		if selected > max then
-			local delta = selected - max
-			show_suggestions_from(show_suggestions_from() + delta)
-		elseif selected < min then
-			local delta = selected - min
-			show_suggestions_from(show_suggestions_from() + delta)
-		end
-	end)
 
 	local anchor = function()
 		return if state.alignment() == "top" then { 0, 0 } else { 0, 1 }
@@ -105,8 +90,7 @@ return component(function(
 				indexes(function()
 					local tracked = {}
 					for i = show_suggestions_from(), show_suggestions_from() + TOTAL_SUGGESTIONS - 1 do
-						tracked[i - show_suggestions_from() + 1] =
-							p.suggestions()[i]
+						tracked[i] = p.suggestions()[i]
 					end
 					return tracked
 				end, function(suggestion, idx: number)
