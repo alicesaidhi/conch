@@ -33,6 +33,7 @@ end
 return {
 	alignment = state.alignment,
 	theme = theme,
+	focused = state.focused,
 
 	app = app,
 	mount = mount,

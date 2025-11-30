@@ -114,6 +114,8 @@ return component(function(p: {
 	end
 
 	cleanup(UserInputService.InputBegan:Connect(function(input)
+		if not state.opened() then return end
+
 		local analysis_result = p.analysis()
 
 		if input.KeyCode == Enum.KeyCode.Down then
