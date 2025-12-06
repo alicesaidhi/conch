@@ -35,9 +35,9 @@ local function levenshtein_distance(strA: string, strB: string): number
 			local substitution_cost = if string.byte(strA, i)
 					== string.byte(strB, i)
 				then 0
-				else 2
+				else 1
 
-			local deletion = matrix[i - 1][j] + 3
+			local deletion = matrix[i - 1][j] + 1
 			local insertion = matrix[i][j - 1] + 1
 			local subsitution = matrix[i - 1][j - 1] + substitution_cost
 

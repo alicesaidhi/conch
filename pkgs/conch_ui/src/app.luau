@@ -114,20 +114,11 @@ return function()
 		input = string.gsub(input, `'(.*)'`, "%1", 1)
 
 		for _, suggestion in suggestions do
-			if
-				not string.find(
-					suggestion.display,
-					string.gsub(input, "^%s", ""),
-					0,
-					true
-				)
-			then
-				continue
-			end
+			if string.match(suggestion.display, input) == nil then continue end
 
 			local score = levenshtein_distance(
-				string.lower(input),
-				string.lower(suggestion.display)
+				string.lower(suggestion.display),
+				string.lower(input)
 			)
 			if score == -math.huge then continue end
 			table.insert(
