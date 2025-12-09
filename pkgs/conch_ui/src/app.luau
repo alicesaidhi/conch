@@ -114,8 +114,7 @@ return function()
 		input = string.gsub(input, `'(.*)'`, "%1", 1)
 
 		for _, suggestion in suggestions do
-			if string.match(suggestion.display, input) == nil then continue end
-
+			-- if string.match(suggestion.display, input) == nil then continue end
 			local score = levenshtein_distance(
 				string.lower(suggestion.display),
 				string.lower(input)
