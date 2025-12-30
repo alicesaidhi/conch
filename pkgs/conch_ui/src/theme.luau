@@ -40,5 +40,6 @@ return {
 	text_error = select_color "red",
 	text_info = select_color "blue",
 	text_warn = select_color "peach",
+	text_success = select_color "green",
 	font = source(Font.fromId(16658246179)),
 }
