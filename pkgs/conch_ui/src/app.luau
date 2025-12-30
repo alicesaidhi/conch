@@ -28,6 +28,8 @@ return function()
 			value.text = `\27[1;43;310mWRN\27[0;33m {value.text}\27[0m`
 		elseif value.kind == "info" then
 			value.text = `\27[1;46;310mINF\27[0;36m {value.text}\27[0m`
+		elseif value.kind == "success" then
+			value.text = `\27[1;42;310mSUC\27[0;32m {value.text}\27[0m`
 		end
 
 		state.logs:write(buffer.fromstring(tostring(value.text)))
