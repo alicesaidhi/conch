@@ -104,7 +104,7 @@ local function run(vm: LanguageVm, input: string): RunResult
 end
 
 local language = {
-	version = "0.4.0-rc.4",
+	version = "0.4.0-rc.5",
 
 	create_vm = create_vm,
 

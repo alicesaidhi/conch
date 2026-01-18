@@ -14,7 +14,7 @@ local derive = vide.derive
 local effect = vide.effect
 
 local STARTUP_TEXT = `\z
-conch-ui 0.4.0-rc.4\tconch-language {language.version}\tconch {conch.version}`
+conch-ui 0.4.0-rc.5\tconch-language {language.version}\tconch {conch.version}`
 
 local NEWLINE = buffer.create(1)
 buffer.writeu8(NEWLINE, 0, string.byte "\n")
@@ -115,16 +115,22 @@ return function()
 
 		for _, suggestion in suggestions do
 			-- if string.match(suggestion.display, input) == nil then continue end
-			local score = levenshtein_distance(
-				string.lower(suggestion.display),
-				string.lower(input)
+			local score = math.min(
+				levenshtein_distance(
+					string.lower(suggestion.display),
+					string.lower(input)
+				),
+				levenshtein_distance(
+					string.lower(suggestion.text),
+					string.lower(input)
+				)
 			)
 			if score == -math.huge then continue end
 			table.insert(
 				filtered_suggestions,
 				{ suggestion = suggestion, score = score }
 			)
-		end
+		end.. if
 
 		table.sort(
 			filtered_suggestions,
