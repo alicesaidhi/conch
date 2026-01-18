@@ -28,6 +28,8 @@ return function()
 			value.text = `\27[1;43;310mWRN\27[0;33m {value.text}\27[0m`
 		elseif value.kind == "info" then
 			value.text = `\27[1;46;310mINF\27[0;36m {value.text}\27[0m`
+		elseif value.kind == "success" then
+			value.text = `\27[1;42;310mSUC\27[0;32m {value.text}\27[0m`
 		end
 
 		state.logs:write(buffer.fromstring(tostring(value.text)))
@@ -114,23 +116,27 @@ return function()
 		input = string.gsub(input, `'(.*)'`, "%1", 1)
 
 		for _, suggestion in suggestions do
-			-- if string.match(suggestion.display, input) == nil then continue end
-			local score = math.min(
-				levenshtein_distance(
-					string.lower(suggestion.display),
-					string.lower(input)
-				),
-				levenshtein_distance(
-					string.lower(suggestion.text),
-					string.lower(input)
+			if
+				not string.find(
+					suggestion.display,
+					string.gsub(input, "^%s", ""),
+					0,
+					true
 				)
+			then
+				continue
+			end
+
+			local score = levenshtein_distance(
+				string.lower(suggestion.display),
+				string.lower(input)
 			)
 			if score == -math.huge then continue end
 			table.insert(
 				filtered_suggestions,
 				{ suggestion = suggestion, score = score }
 			)
-		end.. if
+		end
 
 		table.sort(
 			filtered_suggestions,

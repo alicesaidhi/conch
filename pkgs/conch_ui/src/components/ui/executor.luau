@@ -23,6 +23,8 @@ local effect = vide.effect
 local cleanup = vide.cleanup
 
 local TOTAL_SUGGESTIONS = 10
+local AUTO_SCROLL_DELAY = 0.4
+local AUTO_SCROLL_INTERVAL = 0.05
 
 local history_n = 0
 local history = {}
@@ -52,7 +54,7 @@ return component(function(p: {
 				math.clamp(
 					selected_suggestion(),
 					1,
-					math.max(1, #p.analysis().suggestions)
+					math.max(1, #p.filtered_suggestions())
 				)
 			)
 		end
@@ -113,36 +115,75 @@ return component(function(p: {
 		return before .. with .. " " .. after
 	end
 
+	local function move_down()
+		local analysis_result = p.analysis()
+		if #analysis_result.suggestions == 0 then
+			if history_n == 0 then history[history_n] = raw_text() end
+
+			history_n = math.clamp(history_n - 1, 0, #history)
+			raw_text(history[history_n] or "")
+			cursor_position(#raw_text() + 1)
+		else
+			selected_suggestion(
+				math.min(
+					selected_suggestion() + 1,
+					#p.filtered_suggestions()
+				)
+			)
+		end
+	end
+
+	local function move_up()
+		local analysis_result = p.analysis()
+		if #analysis_result.suggestions == 0 then
+			if history_n == 0 then history[history_n] = raw_text() end
+
+			history_n = math.clamp(history_n + 1, 0, #history)
+			raw_text(history[history_n] or "")
+			cursor_position(#raw_text() + 1)
+		else
+			selected_suggestion(math.max(1, selected_suggestion() - 1))
+		end
+	end
+
+	local holding = {
+		up = false,
+		down = false,
+	}
+
+	local function start_auto_scroll(direction: "up" | "down")
+		task.spawn(function()
+			local nextUpdate = os.clock() + AUTO_SCROLL_DELAY
+
+			while holding[direction] do
+				local now = os.clock()
+				if now < nextUpdate then
+					task.wait()
+					continue
+				end
+				
+				if direction == "up" then
+					move_up()
+				else
+					move_down()
+				end
+
+				nextUpdate = now + AUTO_SCROLL_INTERVAL
+			end
+		end)
+	end
+
 	cleanup(UserInputService.InputBegan:Connect(function(input)
 		if not state.opened() then return end
 
-		local analysis_result = p.analysis()
-
 		if input.KeyCode == Enum.KeyCode.Down then
-			if #analysis_result.suggestions == 0 then
-				if history_n == 0 then history[history_n] = raw_text() end
-
-				history_n = math.clamp(history_n - 1, 0, #history)
-				raw_text(history[history_n] or "")
-				cursor_position(#raw_text() + 1)
-			else
-				selected_suggestion(
-					math.min(
-						selected_suggestion() + 1,
-						#analysis_result.suggestions
-					)
-				)
-			end
+			move_down()
+			holding.down = true
+			start_auto_scroll("down")
 		elseif input.KeyCode == Enum.KeyCode.Up then
-			if #analysis_result.suggestions == 0 then
-				if history_n == 0 then history[history_n] = raw_text() end
-
-				history_n = math.clamp(history_n + 1, 0, #history)
-				raw_text(history[history_n] or "")
-				cursor_position(#raw_text() + 1)
-			else
-				selected_suggestion(math.max(1, selected_suggestion() - 1))
-			end
+			move_up()
+			holding.up = true
+			start_auto_scroll("up")
 		elseif
 			input.KeyCode == Enum.KeyCode.C
 			and input:IsModifierKeyDown(Enum.ModifierKey.Ctrl)
@@ -150,6 +191,26 @@ return component(function(p: {
 			conch.cancel()
 		elseif input.KeyCode == Enum.KeyCode.Return then
 			state.focused(true)
+		end
+	end))
+
+	cleanup(UserInputService.InputEnded:Connect(function(input)
+		if input.KeyCode == Enum.KeyCode.Down then
+			holding.down = false
+		elseif input.KeyCode == Enum.KeyCode.Up then
+			holding.up = false
+		end
+	end))
+
+	cleanup(UserInputService.InputChanged:Connect(function(input)
+		if not state.opened() then return end
+
+		if input.UserInputType == Enum.UserInputType.MouseWheel then
+			if input.Position.Z > 0 then
+				move_up()
+			else
+				move_down()
+			end
 		end
 	end))
 
