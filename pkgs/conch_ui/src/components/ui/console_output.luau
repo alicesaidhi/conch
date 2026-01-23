@@ -93,14 +93,14 @@ return component(function(p: {
 			old_position = mouse
 		else
 			local leftover_size = 1 - total_length() / visible_lines()
-			local unit_per_line = leftover_size
-				/ (total_length() - min() - max())
+			local unit_per_line = leftover_size / (total_length())
 			local delta = old_position - mouse
-			local delta_scale = -delta.Y / scroll_size().Y
+			local delta_scale = delta.Y / scroll_size().Y
 
-			local lines = math.round(delta_scale / unit_per_line)
+			local sign = math.sign(delta_scale)
+			local lines = math.ceil(math.abs(delta_scale) / unit_per_line)
 
-			output_line_position(output_line_position() + lines)
+			output_line_position(output_line_position() + lines * sign)
 
 			if lines ~= 0 then old_position = mouse end
 		end
