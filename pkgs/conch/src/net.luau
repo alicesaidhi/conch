@@ -30,19 +30,17 @@ export type InvokeCommandPacket = {
 	args: { unknown },
 }
 
-export type InvokeReplyPacket =
-	{
-		status: "ok",
-		invoke_id: number,
-		results: { unknown },
-	}
-	| {
-		status: "err",
-		invoke_id: number,
-	}
+export type InvokeReplyPacket = {
+	status: "ok",
+	invoke_id: number,
+	results: { unknown },
+} | {
+	status: "err",
+	invoke_id: number,
+}
 
 export type LogPacket = {
-	kind: "info" | "normal" | "warn" | "error",
+	kind: "info" | "normal" | "warn" | "error" | "success",
 	text: string,
 }
 
@@ -165,9 +163,11 @@ function net.client.on_user_roles_update(
 	remotes.update_user_roles.OnClientEvent:Connect(callback :: any)
 end
 
-function net.client.on_command_registered(callback: (
-	info: RegisterCommandPacket
-) -> ())
+function net.client.on_command_registered(
+	callback: (
+		info: RegisterCommandPacket
+	) -> ()
+)
 	assert(net.client.initialized, "client not initialized")
 	assert_run_context "client"
 

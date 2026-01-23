@@ -253,7 +253,10 @@ return {
 
 	get_command_context = get_command_context,
 
-	log = function(kind: "warn" | "info" | "error" | "normal" | "success", text: string)
+	log = function(
+		kind: "warn" | "info" | "error" | "normal" | "success",
+		text: string
+	)
 		if IS_SERVER then
 			local context = state.command_context[coroutine.running()]
 			if not context then return end
