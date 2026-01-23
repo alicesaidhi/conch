@@ -13,7 +13,7 @@ export type User = {
 }
 
 export type Log = {
-	read kind: "normal" | "info" | "warn" | "error",
+	read kind: "normal" | "info" | "warn" | "error" | "success",
 	read text: string,
 }
 

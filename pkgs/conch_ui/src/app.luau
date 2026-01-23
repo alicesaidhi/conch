@@ -112,13 +112,12 @@ return function()
 			)
 		)
 
-		input = string.gsub(input, `"(.*)"`, "%1", 1)
-		input = string.gsub(input, `'(.*)'`, "%1", 1)
+		input = string.gsub(input, `["'](.*)`, "%1", 1)
 
 		for _, suggestion in suggestions do
 			if
 				not string.find(
-					suggestion.display,
+					string.lower(suggestion.display),
 					string.gsub(input, "^%s", ""),
 					0,
 					true

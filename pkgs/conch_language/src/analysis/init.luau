@@ -626,8 +626,14 @@ local function fill_suggestions(
 		})
 	elseif type.kind == "strange" then
 		if typeof(type.suggestions) == "function" then
-			local value = node
-				and string.sub(state.input, node.span.x + 1, node.span.y + 1)
+			local value = if node and node.kind == "string"
+				then get_value(node.token) :: string
+				elseif node then string.sub(
+					state.input,
+					node.span.x + 1,
+					node.span.y + 1
+				)
+				else nil
 			local suggestions = type.suggestions(value or "")
 
 			table.move(
