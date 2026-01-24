@@ -2,6 +2,7 @@ local Players = game:GetService "Players"
 local RunService = game:GetService "RunService"
 
 local arguments = require "./arguments"
+local context = require "./context"
 local language = require "../roblox_packages/language"
 local net = require "./net"
 local signal = require "./signal"
@@ -55,6 +56,8 @@ end
 local suspended_thread: thread?
 local running_thread: thread?
 
+local function noop() end
+
 local function execute(text: string)
 	assert(suspended_thread == nil, "thread is already running!")
 	suspended_thread = coroutine.running()
@@ -62,7 +65,11 @@ local function execute(text: string)
 	console.output { kind = "info", text = `> {text}` }
 
 	local finished = false
+	local ctx = context.get_command_context()
 	task.spawn(function()
+		local pop = if ctx
+			then context.create_command_context(ctx.executor, ctx.invocation_id)
+			else noop
 		running_thread = coroutine.running()
 		local result = language.run(vm, text)
 
@@ -78,6 +85,7 @@ local function execute(text: string)
 			}
 		end
 
+		pop()
 		if suspended_thread then coroutine.resume(suspended_thread) end
 		finished = true
 	end)
