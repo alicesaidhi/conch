@@ -105,13 +105,6 @@ local function invoke_server_command(
 	local pop = create_command_context(user, data.invoke_id)
 
 	local function handle(ok: boolean, ...: any)
-		console.after_command_run:fire {
-			ok = ok,
-			who = user,
-			command = data.name,
-			arguments = data.args,
-			result = { ... },
-		}
 		pop()
 		if not ok then
 			warn(...)
