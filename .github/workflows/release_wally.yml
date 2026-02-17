@@ -20,7 +20,8 @@ jobs:
         uses: CompeyDev/setup-rokit@v0.1.2
 
       - name: Login
-        run: wally login --token "${{ secrets.WALLY_TOKEN }}"
+	    run: wally login --token "${{ secrets.WALLY_TOKEN }}"
 
       - name: Release
-        run: lune run release_wally
+        run: |
+          lune run release_wally
