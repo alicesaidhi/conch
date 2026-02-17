@@ -573,5 +573,4 @@ for _, path in get_order() do
 	-- 	shell = true,
 	-- })
 	cleanup_files(path)
-	if status.ok == false then error(status.stderr) end
 end

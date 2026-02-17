@@ -1,0 +1,26 @@
+name: release
+on:
+  release:
+    types: [published]
+
+permissions:
+    contents: write
+
+env:
+  GH_TOKEN: ${{ github.token }}
+  
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Rokit
+        uses: CompeyDev/setup-rokit@v0.1.2
+
+      - name: Login
+        run: wally login --token "${{ secrets.WALLY_TOKEN }}"
+
+      - name: Release
+        run: lune run release_wally

@@ -1,0 +1,30 @@
+name: release
+on:
+  release:
+    types: [published]
+
+permissions:
+    contents: write
+
+env:
+  GH_TOKEN: ${{ github.token }}
+  
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Rokit
+        uses: CompeyDev/setup-rokit@v0.1.2
+
+      - name: Install
+        run: |
+          pesde install
+
+      - name: Login
+        run: pesde auth login --token "${{ secrets.PESDE_TOKEN }}"
+
+      - name: Release
+        run: pesde publish -y
