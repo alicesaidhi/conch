@@ -48,6 +48,4 @@ local function levenshtein_distance(strA: string, strB: string): number
 	return matrix[rows][cols], matrix
 end
 
-print(levenshtein_distance("test", "test"))
-
 return levenshtein_distance
