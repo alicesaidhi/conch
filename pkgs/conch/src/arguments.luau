@@ -10,7 +10,15 @@ local function wrap_if_not(value)
 	return if type(value) == "table" then value else { value }
 end
 
-local function obtain_type_name(type: language.Type)
+local function normalize_type(type: language.Type | language.CommandArgument)
+	if type.kind == "argument" then
+		return type.type
+	else
+		return type
+	end
+end
+
+local function obtain_type_name(type: language.Type | language.CommandArgument)
 	if type.kind == "command" then
 		return "Command"
 	elseif type.kind == "function" then
@@ -57,6 +65,8 @@ local function obtain_type_name(type: language.Type)
 		end
 
 		return `\{ {table.concat(keys, ", ")} \}`
+	elseif type.kind == "argument" then
+		return type.name
 	end
 
 	return "error"
@@ -910,9 +920,15 @@ local function struct<T, Indexer, Value>(
 end
 
 local union = function(...)
+	local fields = { ... }
+
+	for i, field in fields do
+		fields[i] = normalize_type(field)
+	end
+
 	return {
 		kind = "union",
-		fields = { ... },
+		fields = fields,
 	}
 end :: & (<A>(A) -> A) & (<A, B>(A, B) -> A | B) & (<A, B, C>(A, B, C) -> A | B | C) & (<A, B, C, D>(A, B, C, D) -> A | B | C | D) & (<A, B, C, D, E>(
 	A,
@@ -923,9 +939,15 @@ end :: & (<A>(A) -> A) & (<A, B>(A, B) -> A | B) & (<A, B, C>(A, B, C) -> A | B 
 ) -> A | B | C | D | E)
 
 local intersect = function<T...>(...: T...)
+	local fields = { ... }
+
+	for i, field in fields do
+		fields[i] = normalize_type(field)
+	end
+
 	return {
 		kind = "intersect",
-		fields = { ... },
+		fields = fields,
 	}
 end :: & (<A>(A) -> A) & (<A, B>(A, B) -> A & B) & (<A, B, C>(A, B, C) -> A & B & C) & (<A, B, C, D>(A, B, C, D) -> A & B & C & D) & (<A, B, C, D, E>(
 	A,
