@@ -342,6 +342,7 @@ local function parse(input: buffer): Output
 					is_alpha(c :: number)
 					or is_digit(c :: number)
 					or c == char "-"
+					or c == char ":"
 				)
 
 			local value = buffer.readstring(input, start, pos - start)

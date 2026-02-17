@@ -43,9 +43,6 @@ type Can<T> = T | () -> T
 
 return component(function(
 	p: {
-		x: Can<number>?,
-		y: Can<number>?,
-
 		result: () -> language.AnalysisResult,
 		suggestions: () -> { language.Suggestion },
 		show_suggestions_from: () -> number,

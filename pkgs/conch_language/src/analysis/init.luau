@@ -224,7 +224,10 @@ local function is_digit_char(c: number): boolean
 end
 
 local function is_ident_char(c: number)
-	return is_start_ident_char(c) or c == char "-" or is_digit_char(c)
+	return is_start_ident_char(c)
+		or c == char "-"
+		or is_digit_char(c)
+		or c == char ":"
 end
 
 local function is_identifier(input: string)

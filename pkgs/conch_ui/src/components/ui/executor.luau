@@ -125,10 +125,7 @@ return component(function(p: {
 			cursor_position(#raw_text() + 1)
 		else
 			selected_suggestion(
-				math.min(
-					selected_suggestion() + 1,
-					#p.filtered_suggestions()
-				)
+				math.min(selected_suggestion() + 1, #p.filtered_suggestions())
 			)
 		end
 	end
@@ -161,7 +158,7 @@ return component(function(p: {
 					task.wait()
 					continue
 				end
-				
+
 				if direction == "up" then
 					move_up()
 				else
@@ -179,11 +176,11 @@ return component(function(p: {
 		if input.KeyCode == Enum.KeyCode.Down then
 			move_down()
 			holding.down = true
-			start_auto_scroll("down")
+			start_auto_scroll "down"
 		elseif input.KeyCode == Enum.KeyCode.Up then
 			move_up()
 			holding.up = true
-			start_auto_scroll("up")
+			start_auto_scroll "up"
 		elseif
 			input.KeyCode == Enum.KeyCode.C
 			and input:IsModifierKeyDown(Enum.ModifierKey.Ctrl)
