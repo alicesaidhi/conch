@@ -74,7 +74,7 @@ local function execute(text: string)
 		local result = language.run(vm, text)
 
 		if result.ok then
-			for _, value in result.values or {} :: never do
+			for _, value in ipairs(result.values or {} :: never) do
 				console.output { kind = "normal", text = tostring(value) }
 			end
 		else

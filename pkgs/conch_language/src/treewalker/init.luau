@@ -4,30 +4,26 @@ type Node = {
 	read span: vector,
 }
 
-export type Scope =
-	{
-		up: Scope?,
-		root: true,
-		vars: { [string]: unknown },
-	}
-	| {
-		up: Scope,
-		root: false,
-		vars: { [string]: unknown },
-	}
+export type Scope = {
+	up: Scope?,
+	root: true,
+	vars: { [string]: unknown },
+} | {
+	up: Scope,
+	root: false,
+	vars: { [string]: unknown },
+}
 
-export type Trace =
-	| {
-		read fn: (...any) -> (),
-		read fn_name: string?,
-		read origin: "luau",
-	}
-	| {
-		read fn: (...any) -> (),
-		read fn_name: string?,
-		read origin: "conch",
-		read line: number,
-	}
+export type Trace = | {
+	read fn: (...any) -> (),
+	read fn_name: string?,
+	read origin: "luau",
+} | {
+	read fn: (...any) -> (),
+	read fn_name: string?,
+	read origin: "conch",
+	read line: number,
+}
 
 export type ExecutionState = {
 	globals: { [string]: unknown },
@@ -38,15 +34,13 @@ export type ExecutionState = {
 
 type Expression = ast.Expression | ast.ExpressionCommand
 
-export type ExecutionResult =
-	{
-		ok: true,
-		values: nil | { unknown },
-	}
-	| {
-		ok: false,
-		err: string,
-	}
+export type ExecutionResult = {
+	ok: true,
+	values: nil | { unknown },
+} | {
+	ok: false,
+	err: string,
+}
 
 local using_machine: { [thread]: ExecutionState } = setmetatable(
 	{},
@@ -507,7 +501,7 @@ local function evaluate_binary(
 		return wrap_op(
 			state,
 			node,
-			"get the power",
+			"power",
 			left,
 			right,
 			function(a, b) return a ^ b end
@@ -663,7 +657,7 @@ end
 ---- tree walker
 
 local function visit_stat_command(state: ExecutionState, node: ast.Command)
-	evaluate_command(state, node)
+	return evaluate_command(state, node)
 end
 
 local function visit_stat_for(state: ExecutionState, node: ast.For): unknown
@@ -767,6 +761,8 @@ local function visit_lstat(state: ExecutionState, node: ast.LastStatement)
 	state.last_statement = { node = node, scope = state.scope }
 end
 
+local results = {}
+
 function visit_block(state: ExecutionState, node: ast.Block, inherit: boolean?)
 	if inherit ~= true then
 		state.scope = {
@@ -776,11 +772,13 @@ function visit_block(state: ExecutionState, node: ast.Block, inherit: boolean?)
 		}
 	end
 
+	local result: { n: number, [number]: any }?
+
 	for _, stat in node.body do
 		if stat.kind == "assign" then
 			visit_stat_assign(state, stat)
 		elseif stat.kind == "command" then
-			visit_stat_command(state, stat)
+			result = visit_stat_command(state, stat)
 		elseif stat.kind == "for" then
 			visit_stat_for(state, stat)
 		elseif stat.kind == "if" then
@@ -794,8 +792,10 @@ function visit_block(state: ExecutionState, node: ast.Block, inherit: boolean?)
 
 	if node.last_statement then visit_lstat(state, node.last_statement) end
 
-	if not state.scope.up then return end
+	if not state.scope.up then return result end
 	state.scope = state.scope.up
+
+	return result
 end
 
 local function create_state(): ExecutionState
@@ -826,7 +826,7 @@ local function execute(state: ExecutionState, ast: ast.Ast): ExecutionResult
 
 	local result_ok = {
 		ok = true,
-		values = nil :: nil | { unknown },
+		values = err :: nil | { unknown },
 	}
 
 	local lstat = state.last_statement
