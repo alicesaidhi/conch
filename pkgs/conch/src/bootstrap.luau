@@ -110,6 +110,7 @@ return function()
 		})
 
 		console.register_command("sleep", {
+			permissions = {},
 			description = "Waits for a given amount of time before continuing execution",
 			arguments = function()
 				return arg.args.number(
