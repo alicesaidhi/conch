@@ -194,7 +194,7 @@ end
 
 return {
 
-	version = "0.4.0-rc.7",
+	version = "0.4.0-rc.8",
 
 	args = arguments.args,
 	get_strange_type = arguments.get_strange_type,
