@@ -23,7 +23,7 @@ All types can be made variadic by using `conch.args.variadic`.
 
 ## Custom types
 
-Conch is technically a full-on language, so types beyond the ones that are built-in have to be implicitly cast into that type. In order to do this, you can use `conch.register_type` to register new exotic types. These types need tbe registered both by the client and server before `initiate_default_lifecycle` and returns a function which can be used to add that type within commands.
+Conch is technically a full-on language, so types beyond the ones that are built-in have to be implicitly cast into that type. In order to do this, you can use `conch.register_type` to register new exotic types. These types need to be registered both by the client and server before `initiate_default_lifecycle` and returns a function which can be used to add that type within commands.
 
 ### Enums
 
