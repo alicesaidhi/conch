@@ -213,10 +213,13 @@ end
 local function char(c: string) return string.byte(c) end
 
 local function is_start_ident_char(c: number)
-	return (char "a" <= c and c <= char "z")
-		or (char "A" <= c and c <= char "Z")
-		or c == char "@"
-		or c == char "_"
+	return c ~= nil
+		and (
+			(char "a" <= c and c <= char "z")
+			or (char "A" <= c and c <= char "Z")
+			or c == char "@"
+			or c == char "_"
+		)
 end
 
 local function is_digit_char(c: number): boolean
