@@ -26,6 +26,8 @@ return component(function(p: {
 	local min = source(0)
 	local max = source(0)
 
+	local selected = source(false)
+
 	effect(function()
 		local stream = state.current_stream()
 		output_line_position(
@@ -141,10 +143,38 @@ return component(function(p: {
 				size = 16,
 				weight = 500,
 
-				rich = true,
-				text = output_text,
+				transparency = function() return if selected() then 0.6 else 1 end,
+
+				text = function()
+					local text = output_text()
+
+					--? currently an ad-hoc solution that is limited to only copying visible text, might be worth trying to implement something better later on
+					text = text:gsub("<(.-)>", "")
+						:gsub("&gt;", ">")
+						:gsub("&lt;", "<")
+						:gsub("&quot;", '"')
+						:gsub("&apos;", "'")
+						:gsub("&amp;", "&")
+
+					return text
+				end,
 
 				editable = false,
+
+				update_focused = selected,
+
+				text {
+					name = "OutputText",
+					ws = 1,
+					auto = "y",
+
+					xalign = "left",
+					size = 16,
+					weight = 500,
+
+					rich = true,
+					text = output_text,
+				},
 			},
 
 			container {
