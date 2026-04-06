@@ -1,4 +1,5 @@
 local ast = require "./ast"
+local display = require "./ast/display"
 
 type Node = {
 	read span: vector,
@@ -311,6 +312,15 @@ local function evaluate_command(
 
 	local command = evaluate_var(state, node.var)
 
+	if command == nil then
+		local name = display.display_var(node.var)
+		return throw(
+			state,
+			node,
+			`attempt to invoke a non-existent command: {name}`
+		)
+	end
+
 	return call(state, node, command, unpack(arguments))
 end
 
@@ -351,7 +361,8 @@ local function wrap_op(
 	op: string,
 	a: any,
 	b: any,
-	fn: (a: any, b: any) -> unknown
+	fn: (a: any, b: any) -> unknown,
+	command_name: string?
 ): unknown
 	local ok, result = pcall(fn, a, b)
 
@@ -853,7 +864,6 @@ local function execute(state: ExecutionState, ast: ast.Ast): ExecutionResult
 end
 
 return {
-
 	create_state = create_state,
 
 	execute = function(state: ExecutionState, ast: ast.Ast)

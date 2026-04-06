@@ -1,5 +1,6 @@
 local analyze = require "@self/analysis"
 local ast = require "@self/ast"
+local display = require "@self/ast/display"
 local treewalker = require "@self/treewalker"
 
 export type LanguageVm = analyze.LanguageVm
@@ -104,7 +105,7 @@ local function run(vm: LanguageVm, input: string): RunResult
 end
 
 local language = {
-	version = "0.4.0-rc.7",
+	version = "0.4.0-rc.8",
 
 	create_vm = create_vm,
 
@@ -116,6 +117,8 @@ local language = {
 	run = run,
 	analyze = analyze.analyze,
 	matches_type = analyze.matches_type,
+
+	display = display,
 }
 
 return language

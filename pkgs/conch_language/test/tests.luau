@@ -2,7 +2,7 @@ local analysis = require "../src/analysis"
 local ast = require "../src/ast"
 local astgen = require "./astgen"
 local compare = require "./astcompare"
-local display = require "./astdisplay"
+local display = require "../src/ast/display"
 local generate = require "./astgenerate"
 local language = require "../src"
 local testkit = require "@vendor/testkit"
@@ -11,7 +11,7 @@ local treewalker = require "../src/treewalker"
 local t = testkit.test()
 
 local function test_ast(input: ast.Ast)
-	local s = display(input)
+	local s = display.display_block(input.block)
 	local b = buffer.fromstring(s)
 	-- print(s)
 	local ok, output_result: ast.Output = pcall(ast.parse, b)

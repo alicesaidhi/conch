@@ -1,4 +1,4 @@
-local ast = require "../src/ast"
+local ast = require "./ast"
 
 local buf = buffer.create(1024)
 local pos = 0
@@ -345,11 +345,40 @@ function display_block(block: ast.Block)
 	display_last_statement(block.last_statement)
 end
 
-return function(ast: ast.Ast): string
-	pos = 0
-	tbs = 0
+local function wrap<T...>(fn: (T...) -> ()): (T...) -> string
+	return function(...: T...)
+		pos = 0
+		tbs = 0
 
-	display_block(ast.block)
+		fn(...)
 
-	return buffer.readstring(buf, 0, pos)
+		return buffer.readstring(buf, 0, pos - 1)
+	end
 end
+
+return {
+	display_assign = wrap(display_assign),
+	display_block = wrap(display_block),
+	display_break = wrap(display_break),
+	display_command = wrap(display_command),
+	display_continue = wrap(display_continue),
+	display_delimited = wrap(display_delimited),
+	display_else_branch = wrap(display_else_branch),
+	display_elseif_branch = wrap(display_elseif_branch),
+	display_expression = wrap(display_expression),
+	display_for = wrap(display_for),
+	display_function_body = wrap(display_function_body),
+	display_if = wrap(display_if),
+	display_if_branch = wrap(display_if_branch),
+	display_last_statement = wrap(display_last_statement),
+	display_return = wrap(display_return),
+	display_separated = wrap(display_separated),
+	display_statement = wrap(display_statement),
+	display_table = wrap(display_table),
+	display_tablefield = wrap(display_tablefield),
+	display_token = wrap(display_token),
+	display_var = wrap(display_var),
+	display_var_root = wrap(display_var_root),
+	display_var_suffix = wrap(display_var_suffix),
+	display_while = wrap(display_while),
+}

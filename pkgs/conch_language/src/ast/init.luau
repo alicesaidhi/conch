@@ -1,4 +1,5 @@
 local ast = require "@self/ast"
+local display = require "@self/display"
 local parse = require "@self/parse"
 local visit = require "@self/visit"
 
@@ -70,4 +71,5 @@ export type Output = parse.Output
 return {
 	parse = parse,
 	visit = visit,
+	display = display,
 }

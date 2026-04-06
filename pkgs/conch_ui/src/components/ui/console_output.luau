@@ -1,4 +1,3 @@
-local RunService = game:GetService "RunService"
 local UserInputService = game:GetService "UserInputService"
 
 local background = require "./background"
@@ -7,13 +6,13 @@ local container = require "../core/container"
 local interval = require "../../util/interval"
 local state = require "../../state"
 local text = require "../core/text"
+local textbox = require "../core/textbox"
 local theme = require "../../theme"
 local vide = require "../../../roblox_packages/vide"
 
 local source = vide.source
 local effect = vide.effect
 local indexes = vide.indexes
-local cleanup = vide.cleanup
 local changed = vide.changed
 
 return component(function(p: {
@@ -132,7 +131,7 @@ return component(function(p: {
 				output_line_position(output_line_position() + n * 3)
 			end,
 
-			text {
+			textbox {
 				name = "OutputText",
 				grow = 1,
 				shrink = 1,
@@ -144,6 +143,8 @@ return component(function(p: {
 
 				rich = true,
 				text = output_text,
+
+				editable = false,
 			},
 
 			container {
