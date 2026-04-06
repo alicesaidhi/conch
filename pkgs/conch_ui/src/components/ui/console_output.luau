@@ -26,8 +26,6 @@ return component(function(p: {
 	local min = source(0)
 	local max = source(0)
 
-	local selected = source(false)
-
 	effect(function()
 		local stream = state.current_stream()
 		output_line_position(
@@ -143,7 +141,8 @@ return component(function(p: {
 				size = 16,
 				weight = 500,
 
-				transparency = function() return if selected() then 0.6 else 1 end,
+				transparency = theme.background_transparency,
+				color = theme.background,
 
 				text = function()
 					local text = output_text()
@@ -160,8 +159,6 @@ return component(function(p: {
 				end,
 
 				editable = false,
-
-				update_focused = selected,
 
 				text {
 					name = "OutputText",
