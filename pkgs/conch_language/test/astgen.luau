@@ -44,7 +44,7 @@ function astgen.if_branch(
 	}
 end
 
-function astgen.if_else_branch(branch: ast.IfBranch)
+function astgen.if_else_branch(branch: ast.IfBranch): ast.ElseIfBranch
 	return {
 		ifelse = token "elseif",
 		branch = branch,

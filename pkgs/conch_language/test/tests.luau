@@ -668,6 +668,6 @@ vm.global_metadata.command = {
 		},
 	},
 }
-testkit.print(analysis(vm, "command t ", 10))
+testkit.print(analysis.analyze(vm, "command t ", 10))
 
 t.FINISH()
