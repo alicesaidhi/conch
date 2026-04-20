@@ -1,8 +1,8 @@
 {
-  "name": "conch_standalone",
+  "name": "conch_plugin",
   "emitLegacyScripts": true,
   "tree": {
-    "$path": "main.luau",
+    "$className": "Folder",
 
     "src": {
       "$path": "src"
