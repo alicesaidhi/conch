@@ -3,8 +3,11 @@ local UserInputService = game:GetService "UserInputService"
 
 local app = require "@self/app"
 local conch = require "./roblox_packages/conch"
+local plugin_api = require "@self/plugin_api"
+local runtime_plugin_api = require "@self/runtime_plugin_api"
 local state = require "@self/state"
 local theme = require "@self/theme"
+local version = require "@self/api_version"
 local vide = require "./roblox_packages/vide"
 
 local mounted = false
@@ -29,6 +32,8 @@ local function bind_to(input: Enum.KeyCode | Enum.UserInputType)
 		focused(opened())
 	end)
 end
+
+plugin_api.expose(version, "alicesays_hallo/conch-ui", runtime_plugin_api)
 
 return {
 	alignment = state.alignment,

@@ -7,6 +7,7 @@ local conch = require "../../../roblox_packages/conch"
 local interval = require "../../util/interval"
 local language = require "../../../roblox_packages/language"
 local loading = require "../../util/loading"
+local runtime_plugin_api = require "../../runtime_plugin_api"
 local screen = require "../core/screen"
 local state = require "../../state"
 local suggestion = require "./suggestion"
@@ -21,14 +22,12 @@ local source = vide.source
 local show = vide.show
 local effect = vide.effect
 local cleanup = vide.cleanup
-local action = vide.action
 
 local TOTAL_SUGGESTIONS = 10
 local AUTO_SCROLL_DELAY = 0.4
 local AUTO_SCROLL_INTERVAL = 0.05
 
 local history_n = 0
-local history = {}
 
 return component(function(p: {
 	working: () -> boolean,
@@ -117,6 +116,7 @@ return component(function(p: {
 	end
 
 	local function move_down()
+		local history = state.history
 		local analysis_result = p.analysis()
 		if
 			#analysis_result.suggestions == 0
@@ -135,6 +135,7 @@ return component(function(p: {
 	end
 
 	local function move_up()
+		local history = state.history
 		local analysis_result = p.analysis()
 		if
 			#analysis_result.suggestions == 0
@@ -318,7 +319,7 @@ return component(function(p: {
 
 				enter = function(value)
 					history_n = 0
-					table.insert(history, 1, value)
+					runtime_plugin_api.add(value)
 
 					p.execute(value)
 					state.focused(true)

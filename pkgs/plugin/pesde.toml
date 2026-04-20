@@ -1,0 +1,16 @@
+name = "alicesaidhi/conch_companion_plugin"
+version = "0.4.0-rc.8"
+includes = ["src/**", "pesde.toml"]
+
+[target]
+environment = "roblox"
+lib = "src/init.luau"
+build_files = ["src"]
+
+[indices]
+default = "https://github.com/daimond113/pesde-index"
+
+[wally_indices]
+default = "https://github.com/UpliftGames/wally-index"
+
+[dependencies]

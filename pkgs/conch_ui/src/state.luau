@@ -15,4 +15,6 @@ return {
 
 	current_stream = source(logging_output),
 	logs = logging_output,
+
+	history = {} :: { string },
 }
