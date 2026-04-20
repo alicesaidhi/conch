@@ -1401,6 +1401,7 @@ local function parse(input: buffer): Output
 	end
 
 	local result = { block = parse_block_node() }
+	print(result)
 
 	if #issues > 0 then
 		error {

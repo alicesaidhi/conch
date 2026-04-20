@@ -432,10 +432,10 @@ function visit_expr<State>(
 
 		visitor.visit_expr_unary_end(state, node)
 	elseif node.kind == "command" then
-		visitor.visit_expr_command(state, node)
-
 		visitor.visit_token(state, node.prefix)
-		if node.command then visitor.visit_command(state, node.command) end
+
+		visitor.visit_expr_command(state, node)
+		if node.command then visit_command(visitor, state, node.command) end
 
 		visitor.visit_expr_command_end(state, node)
 	elseif node.kind == "var" then
