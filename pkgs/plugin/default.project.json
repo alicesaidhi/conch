@@ -1,0 +1,11 @@
+{
+  "name": "conch_standalone",
+  "emitLegacyScripts": true,
+  "tree": {
+    "$path": "main.luau",
+
+    "src": {
+      "$path": "src"
+    }
+  }
+}

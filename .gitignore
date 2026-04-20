@@ -10,6 +10,7 @@
 **/default.project.json
 pkgs/_foreign_*
 !pkgs/conch_standalone/default.project.json
+!pkgs/plugin/default.project.json
 
 /out
 /local
