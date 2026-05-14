@@ -8,6 +8,7 @@ local function get_plugins_api_folder(): Folder
 	if not plugins_api_folder then
 		plugins_api_folder = Instance.new "Folder"
 		plugins_api_folder.Name = "plugins_api"
+		plugins_api_folder.Archivable = false
 		plugins_api_folder.Parent = game
 	end
 
@@ -26,6 +27,7 @@ local function obtain_plugins_api(
 ): Folder
 	if map[name] then return map[name] end
 	local f = Instance.new "Folder"
+	f.Archivable = false
 
 	f:SetAttribute("major-userfacing", version.major)
 	f:SetAttribute("minor-userfacing", version.minor)
@@ -83,6 +85,7 @@ local function wait_for_first_api(name: string): {
 	}
 }
 	local folder = get_plugins_api_folder():WaitForChild(name)
+	folder.Archivable = false
 
 	local version = {
 		major = folder:GetAttribute "userfacing-major",
