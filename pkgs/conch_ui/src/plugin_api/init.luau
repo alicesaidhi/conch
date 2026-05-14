@@ -31,6 +31,7 @@ local function bind_function(
 		func.OnInvoke = fn
 	else
 		local bindable = Instance.new "BindableFunction"
+		bindable.Archivable = false
 		bindable.OnInvoke = fn
 		bindable.Name = name
 		bindable.Parent = folder
@@ -49,6 +50,7 @@ local function bind_event<T...>(
 	else
 		local bindable = Instance.new "BindableEvent"
 
+		bindable.Archivable = false
 		bindable.Name = name
 		bindable.Parent = folder
 
@@ -61,6 +63,7 @@ local function index_folder(folder: Instance, key: string): Instance
 
 	if not child then
 		local f = Instance.new "Folder"
+		f.Archivable = false
 		f.Name = key
 		f.Parent = folder
 		return f
