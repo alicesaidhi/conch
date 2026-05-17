@@ -189,6 +189,40 @@ Returns a command context which contains information about the executor.
 	function conch.get_command_context(): CommandContext
 	```
 
+ - **Details**
+
+    When saved to a variable like this:
+	```luau
+	local context = conch.get_command_context()
+	```
+   it returns:
+	```luau
+	context.invocation_id -- The invocation ID of the command.
+	context.executor -- Information about the player who executed it:
+		player -- The player who executed the command.
+		id -- The player's ID as a string, unreliable, use player.UserId to get ID.
+   		name -- The player's name.
+   		dirty -- A boolean whether the player is dirty or not.
+   		roles -- An array of the player's roles.
+   		disconnected -- A boolean whether the player is disconnected or not.
+ 	```
+
+ 	For example, we can use this to print the player's ID:
+	```luau
+ 	conch.register("userid", {
+ 	description = "Prints your UserId",
+ 	permissions = {},
+ 	arguments = function() end,
+ 	callback = function()
+ 
+	local ctx = conch.get_command_context()
+ 	local id = ctx.executor.player.UserId
+ 
+	conch.log("normal", "Your player ID is " .. id)
+ 	end
+	})
+	```
+   
 ### log()
 
 Logs to the user using this command.
