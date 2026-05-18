@@ -12,7 +12,7 @@ type ScreenGui = {
 }
 
 return function(props: ScreenGui)
-	return create "ScreenGui" {
+	return create("ScreenGui" :: "ScreenGui") {
 		Name = props.name,
 		Enabled = props.enabled,
 		DisplayOrder = props.display_order,
