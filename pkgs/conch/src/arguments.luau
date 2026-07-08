@@ -10,14 +10,6 @@ local function wrap_if_not(value)
 	return if type(value) == "table" then value else { value }
 end
 
-local function normalize_type(type: language.Type | language.CommandArgument)
-	if type.kind == "argument" then
-		return type.type
-	else
-		return type
-	end
-end
-
 local function obtain_type_name(type: language.Type | language.CommandArgument)
 	if type.kind == "command" then
 		return "Command"
@@ -435,7 +427,7 @@ local player_type = register_strange_type {
 			metadata = {
 				name = "self",
 				description = "Refers to yourself",
-				type = "player"
+				type = "player",
 			},
 			text = "@s",
 			display = "@s (self)",
@@ -504,7 +496,7 @@ local userid_type = register_strange_type {
 			metadata = {
 				name = "self",
 				description = "Refers to yourself",
-				type = "player"
+				type = "player",
 			},
 			text = "@s",
 			display = "@s (self)",
@@ -759,7 +751,9 @@ local players_type = pluralize(player_type, {
 			return Players:GetPlayers()
 		elseif v == "@o" then
 			local ctx = context.get_command_context()
-			if not ctx or not ctx.executor.player then return Players:GetPlayers() end
+			if not ctx or not ctx.executor.player then
+				return Players:GetPlayers()
+			end
 
 			local players = Players:GetPlayers()
 			table.remove(players, table.find(players, ctx.executor.player))
@@ -776,7 +770,7 @@ local players_type = pluralize(player_type, {
 				metadata = {
 					name = "all players",
 					description = "Refers to all players in the server",
-					type = "players"
+					type = "players",
 				},
 				text = "@a",
 				display = "@a (all)",
@@ -786,7 +780,7 @@ local players_type = pluralize(player_type, {
 				metadata = {
 					name = "other players",
 					description = "Refers to all players except you in the server",
-					type = "players"
+					type = "players",
 				},
 				text = "@o",
 				display = "@o (others)",
@@ -821,7 +815,7 @@ local userids_type = pluralize(userid_type, {
 				metadata = {
 					name = "all players",
 					description = "Refers to all players in the server",
-					type = "players"
+					type = "players",
 				},
 				text = "@a",
 				display = "@a (all)",
@@ -837,6 +831,18 @@ local colors_type = pluralize(color_type)
 
 -- modifiers
 
+local function unwrap_type(
+	input: language.Type | language.CommandArgument
+): language.Type
+	if input.kind == "argument" and input.type then
+		return input.type
+	elseif input.kind == "argument" then
+		return any_type
+	else
+		return input
+	end
+end
+
 local function literal<T>(value: T): T
 	return {
 		kind = "literal",
@@ -844,7 +850,7 @@ local function literal<T>(value: T): T
 	}
 end
 
-local function opt<T>(arg: T): T
+local function opt<T>(arg: T): T?
 	local type = arg :: language.CommandArgument
 
 	return {
@@ -858,7 +864,7 @@ local function opt<T>(arg: T): T
 					kind = "literal" :: "literal",
 					value = nil,
 				},
-				type.type or type :: language.Type,
+				unwrap_type(type),
 			},
 		},
 		varargs = type.varargs,
@@ -872,7 +878,7 @@ local function variadic<T>(arg: T): ...T
 		kind = "argument",
 		name = type.name or obtain_type_name(type),
 		description = type.description or obtain_type_name(type),
-		type = type.type or type,
+		type = unwrap_type(type),
 		varargs = true,
 	}
 end
@@ -894,26 +900,19 @@ local function struct<T, Indexer, Value>(
 	local fields: { [language.LiteralType]: language.Type } = {}
 
 	for key: any, value: any in pairs(input) do
-		if value.kind == "argument" then value = value.type end
-
-		if key.kind == "argument" then key = key.type end
-
 		fields[{
 			kind = "literal",
-			value = key,
-		} :: any] = value :: any
+			value = unwrap_type(key),
+		} :: any] =
+			unwrap_type(value) :: any
 	end
 
 	local table_type: language.TableType = {
 		kind = "table",
 
 		fields = fields,
-		indexer = if indexer and indexer.kind == "argument"
-			then indexer.type
-			else indexer,
-		value = if value and value.kind == "argument"
-			then value.type
-			else indexer,
+		indexer = indexer and unwrap_type(indexer),
+		value = value and unwrap_type(value),
 	}
 
 	return table_type
@@ -923,7 +922,7 @@ local union = function(...)
 	local fields = { ... }
 
 	for i, field in fields do
-		fields[i] = normalize_type(field)
+		fields[i] = unwrap_type(field)
 	end
 
 	return {
@@ -942,7 +941,7 @@ local intersect = function<T...>(...: T...)
 	local fields = { ... }
 
 	for i, field in fields do
-		fields[i] = normalize_type(field)
+		fields[i] = unwrap_type(field)
 	end
 
 	return {
@@ -977,20 +976,20 @@ local args = {
 	vector = wrap_type(vector_type, "vector") :: types.TypeRegistrator<vector>,
 
 	color = wrap_type(color_type, "Color3") :: types.TypeRegistrator<Color3>,
-	colors = wrap_type(colors_type, "Color3s") :: types.TypeRegistrator<{Color3}>,
+	colors = wrap_type(colors_type, "Color3s") :: types.TypeRegistrator<{ Color3 }>,
 
 	userid = wrap_type(userid_type, "UserId") :: types.TypeRegistrator<number>,
-	userids = wrap_type(userids_type, "UserIds") :: types.TypeRegistrator<{number}>,
+	userids = wrap_type(userids_type, "UserIds") :: types.TypeRegistrator<{ number }>,
 
 	duration = wrap_type(duration_type, "duration") :: types.TypeRegistrator<number>,
 
 	player = wrap_type(player_type, "player") :: types.TypeRegistrator<Player>,
-	players = wrap_type(players_type, "players") :: types.TypeRegistrator<{Player}>,
-	
-	numbers = wrap_type(numbers_type, "numbers") :: types.TypeRegistrator<{number}>,
-	strings = wrap_type(strings_type, "strings") :: types.TypeRegistrator<{string}>,
-	booleans = wrap_type(booleans_type, "booleans") :: types.TypeRegistrator<{boolean}>,
-	vectors = wrap_type(vectors_type, "vectors") :: types.TypeRegistrator<{vector}>,
+	players = wrap_type(players_type, "players") :: types.TypeRegistrator<{ Player }>,
+
+	numbers = wrap_type(numbers_type, "numbers") :: types.TypeRegistrator<{ number }>,
+	strings = wrap_type(strings_type, "strings") :: types.TypeRegistrator<{ string }>,
+	booleans = wrap_type(booleans_type, "booleans") :: types.TypeRegistrator<{ boolean }>,
+	vectors = wrap_type(vectors_type, "vectors") :: types.TypeRegistrator<{ vector }>,
 
 	enum_from_array = enum_from_array,
 	enum_from_map = enum_from_map,
@@ -1007,7 +1006,7 @@ local args = {
 
 	overload = overload,
 
-	dynamic = generate_dynamic_options
+	dynamic = generate_dynamic_options,
 }
 
 return {

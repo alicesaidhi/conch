@@ -16,6 +16,7 @@ export type Log = types.Log
 export type CommandContext = types.CommandContext
 export type Stream = types.Stream
 export type CommandArgument = language.CommandArgument
+export type Suggestion = language.Suggestion
 
 local IS_SERVER = RunService:IsServer()
 local IS_CLIENT = RunService:IsClient()

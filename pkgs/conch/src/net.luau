@@ -106,6 +106,16 @@ function net.server.init()
 		return inst
 	end
 
+	-- local function unreliable_remote(name: string): RemoteEvent
+	-- 	local inst = conch_folder:FindFirstChild(name)
+	-- 		or Instance.new "RemoteEvent"
+	-- 	inst.Name = name
+	-- 	inst.Archivable = false
+	-- 	inst.Parent = conch_folder
+
+	-- 	return inst
+	-- end
+
 	local remote_index: RemoteIndex = {
 		invoke_server_command = remote "invoke_server_command",
 		create_user = remote "create_user",
@@ -174,11 +184,9 @@ function net.client.on_user_roles_update(
 	remotes.update_user_roles.OnClientEvent:Connect(callback :: any)
 end
 
-function net.client.on_command_registered(
-	callback: (
-		info: RegisterCommandPacket
-	) -> ()
-)
+function net.client.on_command_registered(callback: (
+	info: RegisterCommandPacket
+) -> ())
 	assert(net.client.initialized, "client not initialized")
 	assert_run_context "client"
 
