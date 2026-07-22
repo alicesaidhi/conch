@@ -322,7 +322,13 @@ return component(function(p: {
 					runtime_plugin_api.add(value)
 
 					p.execute(value)
-					state.focused(true)
+
+					-- We only regain focus if the UI is still open because the last command
+					-- may have closed it.
+					if state.opened() then
+						state.focused(true)
+					end
+
 					raw_text ""
 					task.delay(0, raw_text, "")
 				end,
