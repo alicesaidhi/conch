@@ -551,7 +551,7 @@ local color_type = register_strange_type {
 				and typeof(value[1]) == "number"
 				and typeof(value[2]) == "number"
 				and typeof(value[3]) == "number"
-			then Color3.fromRGB(value.x, value.y, value.z)
+			then Color3.fromRGB(value[1], value[2], value[3])
 			else error(`could not convert "{typeof(value)}" into Color3`)
 	end,
 
