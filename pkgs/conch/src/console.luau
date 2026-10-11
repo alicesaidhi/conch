@@ -224,18 +224,6 @@ local function coerce_value_into_type(
 	return value
 end
 
-local function set_command_from_representation(
-	info: types.CommandRepresentation
-)
-	if map_remove_info[info] then return end
-
-	write_global(info.name, info.callback)
-
-	commands[info.name] = info
-	map_remove_info[info] =
-		language.attach_info(vm, false, info.name, info.type)
-end
-
 local function unregister_command(info: types.CommandRepresentation)
 	if not map_remove_info[info] then return end
 
@@ -243,6 +231,21 @@ local function unregister_command(info: types.CommandRepresentation)
 	map_remove_info[info]:remove()
 	map_remove_info[info] = nil
 	write_global(info.name, nil)
+end
+
+local function set_command_from_representation(
+	info: types.CommandRepresentation
+)
+	if map_remove_info[info] then return end
+
+	local previous = commands[info.name]
+	if previous then unregister_command(previous) end
+
+	write_global(info.name, info.callback)
+
+	commands[info.name] = info
+	map_remove_info[info] =
+		language.attach_info(vm, false, info.name, info.type)
 end
 
 local function fix_arguments(args: { language.CommandArgument })
