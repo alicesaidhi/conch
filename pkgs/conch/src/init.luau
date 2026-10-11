@@ -85,8 +85,8 @@ local function invoke_server_command(
 	local user = get_user(player)
 	local command = console.console.commands[data.name]
 
-	local function fail()
-		net.server.fire_failed_invoke_reply(player, data.invoke_id)
+	local function fail(why: string?)
+		net.server.fire_failed_invoke_reply(player, data.invoke_id, why)
 	end
 
 	if not command or not user then return fail() end
@@ -100,7 +100,7 @@ local function invoke_server_command(
 		pop()
 		if not ok then
 			warn(...)
-			return fail()
+			return fail(tostring((...)))
 		end
 
 		return net.server.fire_successful_invoke_reply(
