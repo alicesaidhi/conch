@@ -5,6 +5,10 @@ import type Vide from "@rbxts/vide";
  */
 export function bind_to(input: Enum.KeyCode | Enum.UserInputType): void;
 /**
+ * Opens Conch when one of the given aliases is sent in chat. This automatically mounts the UI if it has not yet been mounted.
+ */
+export function bind_to_chat(primary: string, secondary?: string): void;
+/**
  * Mounts the UI to the PlayerGui.
  */
 export function mount(): void;

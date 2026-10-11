@@ -1,4 +1,5 @@
 local Players = game:GetService "Players"
+local TextChatService = game:GetService "TextChatService"
 local UserInputService = game:GetService "UserInputService"
 
 local app = require "@self/app"
@@ -33,6 +34,20 @@ local function bind_to(input: Enum.KeyCode | Enum.UserInputType)
 	end)
 end
 
+local function bind_to_chat(primary: string, secondary: string?)
+	mount()
+
+	local command = Instance.new "TextChatCommand"
+	command.Name = "Conch"
+	command.PrimaryAlias = primary
+	command.SecondaryAlias = secondary or ""
+	command.Triggered:Connect(function()
+		opened(true)
+		focused(true)
+	end)
+	command.Parent = TextChatService
+end
+
 plugin_api.expose(version, "alicesays_hallo/conch-ui", runtime_plugin_api)
 
 return {
@@ -45,6 +60,7 @@ return {
 	opened = opened,
 
 	bind_to = bind_to,
+	bind_to_chat = bind_to_chat,
 
 	conch = conch,
 }
