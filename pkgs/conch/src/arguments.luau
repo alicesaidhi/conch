@@ -305,6 +305,11 @@ local boolean_type = register_strange_type {
 			return x ~= 0
 		elseif typeof(x) == "boolean" then
 			return x
+		elseif typeof(x) == "string" then
+			local value = string.lower(x)
+			if value == "true" then return true end
+			if value == "false" then return false end
+			error(`could not convert "{x}" to a boolean`)
 		else
 			return not not x
 		end
