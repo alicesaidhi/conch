@@ -9,6 +9,18 @@ export function bind_to(input: Enum.KeyCode | Enum.UserInputType): void;
  */
 export function bind_to_chat(primary: string, secondary?: string): void;
 /**
+ * Returns the command history, most recent first.
+ */
+export function get_history(): string[];
+/**
+ * Replaces the command history, for example with one saved through on_history_changed.
+ */
+export function set_history(history: string[]): void;
+/**
+ * Calls the callback with the history whenever it changes. Returns a function that disconnects it.
+ */
+export function on_history_changed(callback: (history: string[]) => void): () => void;
+/**
  * Mounts the UI to the PlayerGui.
  */
 export function mount(): void;

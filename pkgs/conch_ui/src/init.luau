@@ -48,6 +48,18 @@ local function bind_to_chat(primary: string, secondary: string?)
 	command.Parent = TextChatService
 end
 
+local function on_history_changed(callback: (history: { string }) -> ())
+	local listeners: { ({ string }) -> () } =
+		runtime_plugin_api.updated_history :: any
+	local function listener(history: { string }) task.spawn(callback, history) end
+	table.insert(listeners, listener)
+
+	return function()
+		local index = table.find(listeners, listener)
+		if index then table.remove(listeners, index) end
+	end
+end
+
 plugin_api.expose(version, "alicesays_hallo/conch-ui", runtime_plugin_api)
 
 return {
@@ -61,6 +73,10 @@ return {
 
 	bind_to = bind_to,
 	bind_to_chat = bind_to_chat,
+
+	get_history = runtime_plugin_api.get_history,
+	set_history = runtime_plugin_api.set_history,
+	on_history_changed = on_history_changed,
 
 	conch = conch,
 }
