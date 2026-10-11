@@ -615,7 +615,7 @@ local function parse_duration(text: unknown)
 		local duration_string, suffix = string.match(word, `(.-)[%s]?([A-z]+)$`)
 		if duration_string and suffix then
 			local mul = DURATION_TIMES[suffix]
-			if not mul then error(`"{mul}" is not a valid suffix`, 0) end
+			if not mul then error(`"{suffix}" is not a valid suffix`, 0) end
 			local duration = tonumber(duration_string)
 			if not duration then
 				error(`could not convert "{word}" into a duration`, 0)
