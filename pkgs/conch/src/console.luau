@@ -379,7 +379,7 @@ local function register_command<T...>(
 
 			if not ok then
 				warn(unpack(results))
-				error(results[2], 0)
+				error(results[1], 0)
 			end
 
 			return unpack(results)
