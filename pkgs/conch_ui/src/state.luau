@@ -10,6 +10,7 @@ logging_output.max_line_length = workspace.CurrentCamera.ViewportSize.X / 11
 return {
 	opened = source(false),
 	focused = source(false),
+	unlock_mouse = source(true),
 
 	alignment = source("bottom" :: "bottom" | "top"),
 
