@@ -372,22 +372,7 @@ local vector_type = register_strange_type {
 	end,
 	exact_match = nil,
 
-	suggestions = function(): { language.Suggestion }
-		return {
-			{
-				kind = "expression",
-				text = "true",
-				display = "true",
-				metadata = nil,
-			},
-			{
-				kind = "expression",
-				text = "false",
-				display = "false",
-				metadata = nil,
-			},
-		}
-	end,
+	suggestions = nil,
 }
 
 local player_type = register_strange_type {
