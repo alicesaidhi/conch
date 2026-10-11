@@ -24,7 +24,10 @@ local console: types.Console = {
 
 local function write_global(global: string, value: any)
 	assert(not IS_SERVER, "cannot set global on server")
-	assert(string.match(global, "^[A-z%-@_]*$"), `{global} is not a valid name`)
+	assert(
+		string.match(global, "^[A-z%d%-@_:]*$"),
+		`{global} is not a valid name`
+	)
 	language.set_command(vm, global, value)
 end
 
