@@ -160,7 +160,7 @@ function net.client.init()
 end
 
 function net.server.on_ready(fn: (Player) -> ())
-	assert(net.server.initialized, "client not initialized")
+	assert(net.server.initialized, "server not initialized")
 	assert_run_context "server"
 
 	remotes.ready.OnServerEvent:Connect(fn :: any)
