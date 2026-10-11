@@ -634,7 +634,7 @@ local function parse_duration(text: unknown)
 end
 
 local duration_type = register_strange_type {
-	type = "number",
+	type = "duration",
 	id = "__duration_base",
 
 	convert = function(n: unknown): number
