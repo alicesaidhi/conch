@@ -64,6 +64,10 @@ conch.register("kick", {
 
 Now `kick`, `k` and `boot` can all be used to kick a player.
 
+::: warning
+Every command name and alias must be unique. For example, if another command is already called `boot` or already uses `k` as an alias, registering `kick` with the aliases above will error. See [`register`](../../api/conch.md#register) for the full rules.
+:::
+
 It's possible to also register commands quickly, by using the `conch.register_quick` function. This removes the ability to specify arguments which are useful for analysis, but is useful for when you need to quickly make a function accessible. You can pass the permissions required after the function.
 
 ```luau
