@@ -349,23 +349,49 @@ function autocomplete.visit_var_root(state, node)
 	if node.kind == "global" then
 		local global_metadata = state.vm.global_metadata
 
+		-- aliases share the type of the command they alias, so group every
+		-- name by its type once instead of rescanning for each global
+		local names_by_type: { [Type]: { string } } = {}
+		for name, type in global_metadata do
+			local names = names_by_type[type]
+			if names then
+				table.insert(names, name)
+			else
+				names_by_type[type] = { name }
+			end
+		end
+
+		-- metadata and sorted alias lists, computed at most once per type
+		local metadata_by_type: { [Type]: Metadata | false } = {}
+		local aliases_by_type: { [Type]: { string } } = {}
+
 		for global in state.globals do
 			local type = global_metadata[global]
-			local metadata = if type then get_metadata_for(type) else nil
+			local metadata: Metadata? = nil
+			if type then
+				local cached = metadata_by_type[type]
+				if cached == nil then
+					cached = get_metadata_for(type) or false
+					metadata_by_type[type] = cached
+				end
+				metadata = cached or nil
+			end
 			local alias_of: string? = nil
 
 			if metadata then
-				-- aliases share the type of the command they alias, so any
-				-- other global with the same type is another name for it
-				local aliases = {}
-				for other, other_type in global_metadata do
-					if other_type ~= type or other == global then continue end
-					if other == metadata.name then continue end
-					table.insert(aliases, other)
-				end
-				table.sort(aliases)
-
 				if global ~= metadata.name then alias_of = metadata.name end
+
+				local aliases = aliases_by_type[type]
+				if alias_of == nil and aliases == nil then
+					aliases = {}
+					for _, other in names_by_type[type] do
+						if other ~= metadata.name then
+							table.insert(aliases, other)
+						end
+					end
+					table.sort(aliases)
+					aliases_by_type[type] = aliases
+				end
 
 				metadata = {
 					name = global,
