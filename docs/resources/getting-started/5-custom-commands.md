@@ -45,6 +45,25 @@ conch.register("kick", {
 
 With this setup, any player that has the `kick-player` permission will be able to run the `kick` command.
 
+Commands can also be given aliases, which are alternative names that run the same command.
+
+```luau
+conch.register("kick", {
+    description = "Kicks the given player from the server",
+    permissions = { "kick-player" },
+    aliases = { "k", "boot" },
+    arguments = function()
+        return conch.args.player(), conch.args.string()
+    end,
+
+    callback = function(player, reason)
+        player:Kick(reason)
+    end
+})
+```
+
+Now `kick`, `k` and `boot` can all be used to kick a player.
+
 It's possible to also register commands quickly, by using the `conch.register_quick` function. This removes the ability to specify arguments which are useful for analysis, but is useful for when you need to quickly make a function accessible. You can pass the permissions required after the function.
 
 ```luau

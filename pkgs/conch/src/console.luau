@@ -52,6 +52,7 @@ local function replicate_to_player(
 		name = representation.name,
 		description = representation.description,
 		permissions = representation.permissions,
+		aliases = representation.aliases,
 		type = representation.type,
 	})
 end
@@ -109,8 +110,9 @@ local function cancel()
 	end
 end
 
-local map_remove_info: { [types.CommandRepresentation]: language.TypeAnalysisInfo } =
-	{}
+local map_remove_info: {
+	[types.CommandRepresentation]: { language.TypeAnalysisInfo },
+} = {}
 
 --[=[
 Determines which command is the valid overload to use in the case the command
@@ -229,20 +231,33 @@ local function set_command_from_representation(
 )
 	if map_remove_info[info] then return end
 
+	local infos = {}
+
 	write_global(info.name, info.callback)
+	table.insert(infos, language.attach_info(vm, false, info.name, info.type))
+
+	for _, alias in info.aliases do
+		write_global(alias, info.callback)
+		table.insert(infos, language.attach_info(vm, false, alias, info.type))
+	end
 
 	commands[info.name] = info
-	map_remove_info[info] =
-		language.attach_info(vm, false, info.name, info.type)
+	map_remove_info[info] = infos
 end
 
 local function unregister_command(info: types.CommandRepresentation)
 	if not map_remove_info[info] then return end
 
 	commands[info.name] = nil
-	map_remove_info[info]:remove()
+	for _, analysis_info in map_remove_info[info] do
+		analysis_info:remove()
+	end
 	map_remove_info[info] = nil
 	write_global(info.name, nil)
+
+	for _, alias in info.aliases do
+		write_global(alias, nil)
+	end
 end
 
 local function fix_arguments(args: { language.CommandArgument })
@@ -315,6 +330,7 @@ local function register_command<T...>(
 	info: {
 		permissions: { types.Permission },
 		description: string?,
+		aliases: { string }?,
 		arguments: () -> T...,
 		callback: (T...) -> ...any,
 	}
@@ -330,6 +346,7 @@ local function register_command<T...>(
 		name = name,
 		description = info.description,
 		permissions = info.permissions,
+		aliases = info.aliases or {},
 
 		type = type_information,
 

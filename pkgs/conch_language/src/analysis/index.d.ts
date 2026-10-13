@@ -3,7 +3,9 @@ import { Issue } from "../ast";
 export type Metadata = {
 	name: string,
 	description: string,
-	type: string
+	type: string,
+	alias_of?: string,
+	aliases?: string[]
 }
 
 type SimpleValue = number | string | boolean
@@ -13,7 +15,8 @@ export type Suggestion = {
 	replace: vector,
 	text: string,
 	display: string,
-	metadata?: Metadata
+	metadata?: Metadata,
+	alias_of?: string
 }
 
 export type LiteralType = {

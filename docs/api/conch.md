@@ -160,6 +160,7 @@ Registers a new command.
         props: {
             description: string?,
             permissions: { Permission },
+            aliases: { string }?,
             arguments: () -> T...,
             callback: (T...) -> (...any),
         }
@@ -169,6 +170,8 @@ Registers a new command.
 - **Details**
 
     Registers a given command with the provided description. This command is only visible to players who have the required permissions.
+
+    Optionally, `aliases` can be given to make the command also runnable under other names. For example, a `kick` command with the aliases `{ "k", "boot" }` can be run with `kick`, `k` or `boot`.
 
 ### register_default_commands()
 

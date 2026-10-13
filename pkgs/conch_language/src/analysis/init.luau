@@ -5,6 +5,10 @@ export type Metadata = {
 	read name: string,
 	read description: string,
 	read type: string,
+	--- the canonical name, if this is an alias of a command
+	read alias_of: string?,
+	--- other names this command can be invoked by
+	read aliases: { string }?,
 }
 export type LanguageVm = {
 	global_metadata: { [string]: Type },
@@ -25,6 +29,8 @@ export type Suggestion = {
 	read text: string,
 	read display: string,
 	read metadata: Metadata?,
+	--- the canonical name, if this suggestion is an alias of a command
+	read alias_of: string?,
 }
 
 --[=[
@@ -341,12 +347,43 @@ function autocomplete.visit_var_root(state, node)
 	local suggestions: { Suggestion } = {}
 
 	if node.kind == "global" then
+		local global_metadata = state.vm.global_metadata
+
 		for global in state.globals do
+			local type = global_metadata[global]
+			local metadata = if type then get_metadata_for(type) else nil
+			local alias_of: string? = nil
+
+			if metadata then
+				-- aliases share the type of the command they alias, so any
+				-- other global with the same type is another name for it
+				local aliases = {}
+				for other, other_type in global_metadata do
+					if other_type ~= type or other == global then continue end
+					if other == metadata.name then continue end
+					table.insert(aliases, other)
+				end
+				table.sort(aliases)
+
+				if global ~= metadata.name then alias_of = metadata.name end
+
+				metadata = {
+					name = global,
+					description = metadata.description,
+					type = metadata.type,
+					alias_of = alias_of,
+					aliases = if alias_of == nil and #aliases > 0
+						then aliases
+						else nil,
+				}
+			end
+
 			table.insert(suggestions, {
 				kind = "expression" :: "expression",
 				text = global,
 				display = global,
-				metadata = get_metadata_for(state.vm.global_metadata[global]),
+				metadata = metadata,
+				alias_of = alias_of,
 			})
 		end
 	elseif node.kind == "name" then
