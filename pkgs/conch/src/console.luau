@@ -23,7 +23,7 @@ local console: types.Console = {
 }
 
 local function is_valid_name(name: string): boolean
-	return string.match(name, "^[A-z%d%-@_:]*$") ~= nil
+	return string.match(name, "^[%w_@:%-]+$") ~= nil
 end
 
 local function write_global(global: string, value: any)
