@@ -96,7 +96,7 @@ return component(function(
 						h = 20,
 
 						order = idx,
-						
+
 						color = theme.select_color "crust",
 						transparency = function()
 							return if idx == p.selected() then 0 else 1
@@ -113,7 +113,21 @@ return component(function(
 								return if idx == p.selected() then theme.select_color("text")() else  theme.select_color("subtext1")()
 							end,
 							text = function() return suggestion().display end
-						}
+						},
+
+						-- dim hint showing which command an alias points to
+						show(function() return suggestion().alias_of end, function()
+							return text {
+								ws = 1,
+								h = 20,
+								pad = { r = 4 },
+
+								size = 14,
+								xalign = "right",
+								color = theme.select_color "subtext0",
+								text = function() return `→ {suggestion().alias_of}` end
+							}
+						end),
 					}
 				end),
 			}
@@ -135,9 +149,10 @@ return component(function(
 
 				container {
 					w = 300, h = 24,
+					order = 1,
 					flex = { direction = "row", justify = "between" },
 					pad = { x = 4 },
-					
+
 					text {
 						text = function() return result().name or "not defined" end,
 						size = 20,
@@ -153,13 +168,36 @@ return component(function(
 					},
 				},
 
+				show(function()
+					local info = result()
+					return info.alias_of or (info.aliases and #info.aliases > 0)
+				end, function()
+					return text {
+						w = 300,
+						order = 2,
+						pad = { x = 4 },
+						wraps = true,
+						size = 14,
+						xalign = "left",
+
+						color = theme.select_color "subtext0",
+
+						text = function()
+							local info = result()
+							if info.alias_of then return `Alias of {info.alias_of}` end
+							return `Aliases: {table.concat(info.aliases or {}, ", ")}`
+						end,
+					}
+				end),
+
 				text {
 					w = 300,
+					order = 3,
 					pad = { p = 4 },
 					wraps = true,
 					size = 16,
 					xalign = "left",
-					
+
 					color = theme.text,
 
 					text = function()

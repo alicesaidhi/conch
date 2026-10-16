@@ -9,6 +9,18 @@ export function bind_to(input: Enum.KeyCode | Enum.UserInputType): void;
  */
 export function bind_to_chat(primary: string, secondary?: string): void;
 /**
+ * Returns the command history, most recent first.
+ */
+export function get_history(): string[];
+/**
+ * Replaces the command history, for example with one saved through on_history_changed.
+ */
+export function set_history(history: string[]): void;
+/**
+ * Calls the callback with the history whenever it changes. Returns a function that disconnects it.
+ */
+export function on_history_changed(callback: (history: string[]) => void): () => void;
+/**
  * Mounts the UI to the PlayerGui.
  */
 export function mount(): void;
@@ -16,6 +28,10 @@ export function mount(): void;
  * A vide source that stores if the UI is enabled or not. When called with a boolean, sets it to that boolean. Otherwise, returns the currently stored boolean.
  */
 export declare const opened: Vide.Source<boolean>
+/**
+ * A vide source that stores if the mouse is unlocked while the UI is open. Defaults to true. Set it to false if your game manages the mouse itself.
+ */
+export declare const unlock_mouse: Vide.Source<boolean>
 /**
  * Refers to the UI component for the Conch UI.
  */

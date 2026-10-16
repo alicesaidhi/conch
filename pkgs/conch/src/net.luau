@@ -20,6 +20,7 @@ export type RegisterCommandPacket = {
 	name: string,
 	description: string?,
 	permissions: { string },
+	aliases: { string }?,
 	type: language.Type,
 }
 
