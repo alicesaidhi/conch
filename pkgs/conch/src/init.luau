@@ -28,6 +28,57 @@ local has_permissions = user.has_permissions
 local create_command_context = context.create_command_context
 local get_command_context = context.get_command_context
 
+local limits: types.Limits = {}
+
+-- keyed by user, so the entries go away together with the user
+local invoke_buckets: { [types.User]: { tokens: number, at: number } } = {}
+local last_runs: { [types.User]: { [string]: number } } = {}
+setmetatable(invoke_buckets, { __mode = "k" })
+setmetatable(last_runs, { __mode = "k" })
+
+--[=[
+Takes one invoke from the user's token bucket, which refills at
+max_invokes_per_second. Returns false when the bucket is empty.
+]=]
+local function take_invoke(user: types.User): boolean
+	local rate = limits.max_invokes_per_second
+	if not rate then return true end
+
+	local capacity = math.max(rate, 1)
+	local now = os.clock()
+	local bucket = invoke_buckets[user] or { tokens = capacity, at = now }
+	invoke_buckets[user] = bucket
+
+	bucket.tokens = math.min(capacity, bucket.tokens + (now - bucket.at) * rate)
+	bucket.at = now
+
+	if bucket.tokens < 1 then return false end
+	bucket.tokens -= 1
+	return true
+end
+
+--[=[
+Returns how many seconds are left on the command's cooldown for the user.
+When none are left, the cooldown starts again.
+]=]
+local function use_cooldown(
+	user: types.User,
+	command: types.CommandRepresentation
+): number
+	local cooldown = command.cooldown
+	if not cooldown then return 0 end
+
+	local runs: { [string]: number } = last_runs[user] or {}
+	last_runs[user] = runs
+
+	local now = os.clock()
+	local last = runs[command.name]
+	if last and now - last < cooldown then return cooldown - (now - last) end
+
+	runs[command.name] = now
+	return 0
+end
+
 local function FOREACH<K, V>(t: { [K]: V }, fn: (value: V, key: K) -> ())
 	for key, value in t do
 		fn(value, key)
@@ -103,6 +154,14 @@ local function invoke_server_command(
 	if not command or not user then return fail() end
 	if not has_permissions(user, unpack(command.permissions)) then
 		return fail()
+	end
+	if not take_invoke(user) then
+		return fail "you are running commands too quickly"
+	end
+
+	local remaining = use_cooldown(user, command)
+	if remaining > 0 then
+		return fail(`{command.name} is on cooldown for {math.ceil(remaining)}s`)
 	end
 
 	local pop = create_command_context(user, data.invoke_id)
@@ -240,6 +299,10 @@ return {
 	on_execution = function(callback: (Player: Player, src: string) -> ())
 		local connection = net.server.on_log_command(function(player, log)
 			if typeof(log) ~= "string" then return player:Kick() end
+
+			local max_length = limits.max_input_length
+			if max_length and #log > max_length then return end
+
 			callback(player, log)
 		end)
 
@@ -254,6 +317,9 @@ return {
 	initiate_default_lifecycle = initiate_default_lifecycle,
 	has_permissions = user.has_permissions,
 	set_role_permissions = set_role,
+	set_limits = function(new_limits: types.Limits)
+		limits = table.clone(new_limits)
+	end,
 
 	give_roles = user.give_roles,
 	remove_roles = user.remove_roles,
