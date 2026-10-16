@@ -152,6 +152,7 @@ end
 
 local function cancel()
 	if suspended_thread and running_thread then
+		state.command_context[running_thread] = nil
 		task.cancel(running_thread)
 		coroutine.resume(suspended_thread)
 
