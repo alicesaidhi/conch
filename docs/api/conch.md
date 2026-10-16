@@ -160,6 +160,7 @@ Registers a new command.
         props: {
             description: string?,
             permissions: { Permission },
+            aliases: { string }?,
             arguments: () -> T...,
             callback: (T...) -> (...any),
         }
@@ -169,6 +170,17 @@ Registers a new command.
 - **Details**
 
     Registers a given command with the provided description. This command is only visible to players who have the required permissions.
+
+    Optionally, `aliases` can be given to make the command also runnable under other names. For example, a `kick` command with the aliases `{ "k", "boot" }` can be run with `kick`, `k` or `boot`.
+
+    Command names and aliases share a single namespace, and are resolved when the command is registered:
+
+    - Names and aliases may only contain letters, digits, `-`, `_`, `@` and `:`. Registering an invalid name results in an error.
+    - Registering a command with a name that matches an existing command's aliases will error.
+    - Registering a command with an alias that matches an existing command's name or aliases will error.
+    - Duplicate aliases, and an alias equal to the command's own name, are ignored.
+    - Registering a command again under the same name replaces the previous registration, including its aliases. Aliases that are left out of the new registration stop working.
+    - The aliases table is copied on registration, so changing it afterwards has no effect.
 
 ### register_default_commands()
 

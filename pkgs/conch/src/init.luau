@@ -52,6 +52,7 @@ local function initiate_user_replication(user: types.User)
 			name = command.name,
 			description = command.description,
 			permissions = command.permissions,
+			aliases = command.aliases,
 			type = command.type,
 		})
 	end
@@ -83,6 +84,15 @@ local function invoke_server_command(
 	player: Player,
 	data: net.InvokeCommandPacket
 )
+	if
+		typeof(data) ~= "table"
+		or typeof(data.name) ~= "string"
+		or typeof(data.invoke_id) ~= "number"
+		or typeof(data.args) ~= "table"
+	then
+		return player:Kick()
+	end
+
 	local user = get_user(player)
 	local command = console.console.commands[data.name]
 
@@ -229,7 +239,7 @@ return {
 
 	on_execution = function(callback: (Player: Player, src: string) -> ())
 		local connection = net.server.on_log_command(function(player, log)
-			if typeof(log) ~= "string" then player:Kick() end
+			if typeof(log) ~= "string" then return player:Kick() end
 			callback(player, log)
 		end)
 

@@ -133,6 +133,7 @@ local function register_command(data: net.RegisterCommandPacket)
 	console.register_command(data.name, {
 		description = data.description,
 		permissions = data.permissions,
+		aliases = data.aliases,
 		arguments = function()
 			if data.type.kind == "command" then
 				return unpack(data.type.arguments)
