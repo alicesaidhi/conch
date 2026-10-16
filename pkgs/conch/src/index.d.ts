@@ -43,6 +43,15 @@ export type CommandContext = {
 };
 
 /**
+ * Runs before the callback of the command it is given to, after the before_run hooks. Returning a string blocks the command and shows the string to the executor as an error.
+ */
+export type Guard = (ctx: {
+	who: User,
+	command: string,
+	arguments: unknown[],
+}) => string | undefined;
+
+/**
  * Executes the given text.
  * 
  * @description Outputs an error into the console if it's not enabled.
@@ -64,6 +73,7 @@ export function register<const T extends Type[], const V extends VarargType>(
 	props: {
 		description?: string,
 		aliases?: string[],
+		guards?: Guard[],
 		permissions: string[],
 		arguments: () => LuaTuple<[...T, V]>,
 		callback: (...arguments: [...InferTypes<T>, ...InferVarargType<V>]) => unknown,
@@ -79,6 +89,7 @@ export function register<const T extends Type[]>(
 	props: {
 		description?: string,
 		aliases?: string[],
+		guards?: Guard[],
 		permissions: string[],
 		arguments: () => LuaTuple<T>,
 		callback: (...arguments: InferTypes<T>) => unknown,
@@ -94,6 +105,7 @@ export function register<const T extends VarargType>(
 	props: {
 		description?: string,
 		aliases?: string[],
+		guards?: Guard[],
 		permissions: string[],
 		arguments: () => T,
 		callback: (...arguments: InferVarargType<T>) => unknown,
@@ -109,6 +121,7 @@ export function register<const T extends Type>(
 	props: {
 		description?: string,
 		aliases?: string[],
+		guards?: Guard[],
 		permissions: string[],
 		arguments: () => T,
 		callback: (argument: InferType<T>) => unknown,
@@ -124,6 +137,7 @@ export function register<const T extends OverloadType>(
 	props: {
 		description?: string,
 		aliases?: string[],
+		guards?: Guard[],
 		permissions: string[],
 		arguments: () => T,
 		callback: (...arguments: T extends OverloadType<infer O> ? InferTypes<O[number]['arguments']> : never) => unknown,

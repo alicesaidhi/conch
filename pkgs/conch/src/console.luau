@@ -395,6 +395,7 @@ local function register_command<T...>(
 		permissions: { types.Permission },
 		description: string?,
 		aliases: { string }?,
+		guards: { (types.BeforeRunContext) -> string? }?,
 		arguments: () -> T...,
 		callback: (T...) -> ...any,
 	}
@@ -403,6 +404,7 @@ local function register_command<T...>(
 		{ info.arguments() } :: { language.CommandArgument | arguments.Overload }
 
 	local callback = info.callback
+	local guards = info.guards or {}
 	local type_information: language.Type =
 		from_arguments_or_overload(name, info.description, args)
 	local aliases = claim_names(name, info.aliases)
@@ -454,6 +456,11 @@ local function register_command<T...>(
 
 			for _, hook in before_run_hooks do
 				local why = hook(run_context)
+				if why then deny(why) end
+			end
+
+			for _, guard in guards do
+				local why = guard(run_context)
 				if why then deny(why) end
 			end
 
