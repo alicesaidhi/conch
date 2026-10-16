@@ -54,6 +54,7 @@ return {
 	alignment = state.alignment,
 	theme = theme,
 	focused = state.focused,
+	unlock_mouse = state.unlock_mouse,
 
 	app = app,
 	mount = mount,

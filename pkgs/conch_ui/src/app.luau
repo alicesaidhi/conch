@@ -9,6 +9,7 @@ local screen = require "./components/core/screen"
 local state = require "./state"
 local vide = require "../roblox_packages/vide"
 
+local create = vide.create
 local source = vide.source
 local derive = vide.derive
 local effect = vide.effect
@@ -162,6 +163,14 @@ return function()
 		name = "Command Executor",
 		display_order = 100_000,
 		enabled = state.opened,
+
+		create "TextButton" {
+			Name = "MouseUnlock",
+			Modal = state.unlock_mouse,
+			Size = UDim2.new(),
+			BackgroundTransparency = 1,
+			Text = "",
+		},
 
 		container {
 			ws = 1,

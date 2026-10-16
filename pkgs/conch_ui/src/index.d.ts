@@ -17,6 +17,10 @@ export function mount(): void;
  */
 export declare const opened: Vide.Source<boolean>
 /**
+ * A vide source that stores if the mouse is unlocked while the UI is open. Defaults to true. Set it to false if your game manages the mouse itself.
+ */
+export declare const unlock_mouse: Vide.Source<boolean>
+/**
  * Refers to the UI component for the Conch UI.
  */
 export function app(): ScreenGui;
