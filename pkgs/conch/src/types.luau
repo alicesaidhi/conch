@@ -35,6 +35,7 @@ export type CommandRepresentation = {
 	read description: string?,
 	read permissions: { string },
 	read aliases: { string },
+	read group: string?,
 	read callback: (...any) -> ...any,
 
 	read type: language.Type,

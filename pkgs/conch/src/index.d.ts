@@ -64,6 +64,7 @@ export function register<const T extends Type[], const V extends VarargType>(
 	props: {
 		description?: string,
 		aliases?: string[],
+		group?: string,
 		permissions: string[],
 		arguments: () => LuaTuple<[...T, V]>,
 		callback: (...arguments: [...InferTypes<T>, ...InferVarargType<V>]) => unknown,
@@ -79,6 +80,7 @@ export function register<const T extends Type[]>(
 	props: {
 		description?: string,
 		aliases?: string[],
+		group?: string,
 		permissions: string[],
 		arguments: () => LuaTuple<T>,
 		callback: (...arguments: InferTypes<T>) => unknown,
@@ -94,6 +96,7 @@ export function register<const T extends VarargType>(
 	props: {
 		description?: string,
 		aliases?: string[],
+		group?: string,
 		permissions: string[],
 		arguments: () => T,
 		callback: (...arguments: InferVarargType<T>) => unknown,
@@ -109,6 +112,7 @@ export function register<const T extends Type>(
 	props: {
 		description?: string,
 		aliases?: string[],
+		group?: string,
 		permissions: string[],
 		arguments: () => T,
 		callback: (argument: InferType<T>) => unknown,
@@ -124,6 +128,7 @@ export function register<const T extends OverloadType>(
 	props: {
 		description?: string,
 		aliases?: string[],
+		group?: string,
 		permissions: string[],
 		arguments: () => T,
 		callback: (...arguments: T extends OverloadType<infer O> ? InferTypes<O[number]['arguments']> : never) => unknown,
