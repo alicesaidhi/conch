@@ -110,6 +110,10 @@ local function invoke_server_command(
 	local function handle(ok: boolean, ...: any)
 		pop()
 		if not ok then
+			-- a before_run hook gives its reason for the executor to read
+			local denied = console.get_denied_reason((...))
+			if denied then return fail(denied) end
+
 			warn(...)
 			return fail(
 				if has_permissions(user, constants.FULL_OUTPUT_PERMISSION)
@@ -250,6 +254,7 @@ return {
 			console.after_command_run:connect(callback :: (...any) -> ())
 		return function() connection:disconnect() end
 	end,
+	before_run = console.before_run,
 
 	initiate_default_lifecycle = initiate_default_lifecycle,
 	has_permissions = user.has_permissions,

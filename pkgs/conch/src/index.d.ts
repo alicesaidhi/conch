@@ -208,6 +208,18 @@ export function on_command_run(
 	}) => void
 ): () => void;
 /**
+ * Calls the given function before a command registered by the host runs, after the permission check and argument conversion. Returning a string blocks the command and shows the string to the executor as an error.
+ * 
+ * @description On the server, it only gets called for commands registered by the server. Blocked commands do not reach on_command_run.
+ */
+export function before_run(
+	fn: (ctx: {
+		who: User,
+		command: string,
+		arguments: unknown[]
+	}) => string | undefined
+): () => void;
+/**
  * Calls the given function whenever a player executes something.
  */
 export function on_execution(
