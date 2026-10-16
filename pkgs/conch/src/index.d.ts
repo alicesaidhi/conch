@@ -130,6 +130,12 @@ export function register<const T extends OverloadType>(
 	}
 ): void;
 /**
+ * Unregisters a command.
+ *
+ * @description Removes the command and its aliases. When called on the server, the command is removed from every client as well.
+ */
+export function unregister(name: string): void;
+/**
  * Registers the `license`, `print`, `info`, `warn` and `error` commands.
  */
 export function register_default_commands(): void;

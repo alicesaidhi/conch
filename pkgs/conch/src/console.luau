@@ -36,6 +36,15 @@ end
 local name_owners: { [string]: string } = {}
 
 --[=[
+Releases the name and aliases claimed by a command.
+]=]
+local function release_names(name: string)
+	for claimed, owner in name_owners do
+		if owner == name then name_owners[claimed] = nil end
+	end
+end
+
+--[=[
 Validates the name and aliases of a command before anything is registered,
 and claims them for the command. Returns a deduplicated copy of the aliases.
 ]=]
@@ -69,9 +78,7 @@ local function claim_names(name: string, aliases: { string }?): { string }
 	end
 
 	-- release names from a previous registration of this command
-	for claimed, claimed_owner in name_owners do
-		if claimed_owner == name then name_owners[claimed] = nil end
-	end
+	release_names(name)
 
 	name_owners[name] = name
 	for _, alias in result do
@@ -495,6 +502,31 @@ local function register(name: string, fn: (...any) -> ...any, ...: string)
 	})
 end
 
+--[=[
+Removes a command and its aliases. On the server, the command is removed from
+every client as well.
+]=]
+local function unregister(name: string)
+	if IS_SERVER then
+		if not commands[name] then return end
+		commands[name] = nil
+
+		-- every client, since one that lost the permission still keeps the
+		-- command and would add it back once it gets the permission again
+		if net.server.initialized then
+			net.server.fire_unregister_command { name = name }
+		end
+	else
+		local command = state.local_commands[name]
+		if not command then return end
+
+		unregister_command(command.representation)
+		state.local_commands[name] = nil
+	end
+
+	release_names(name)
+end
+
 local function analyze(src: string, where: number): language.AnalysisResult?
 	return language.analyze(vm, src, where)
 end
@@ -503,6 +535,7 @@ return {
 	console = console,
 	register_quick = register,
 	register_command = register_command,
+	unregister = unregister,
 	replicate_to_player = replicate_to_player,
 	execute = execute,
 	cancel = cancel,
