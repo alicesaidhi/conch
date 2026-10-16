@@ -5,6 +5,10 @@ export type Metadata = {
 	read name: string,
 	read description: string,
 	read type: string,
+	--- the canonical name, if this is an alias of a command
+	read alias_of: string?,
+	--- other names this command can be invoked by
+	read aliases: { string }?,
 }
 export type LanguageVm = {
 	global_metadata: { [string]: Type },
@@ -25,6 +29,8 @@ export type Suggestion = {
 	read text: string,
 	read display: string,
 	read metadata: Metadata?,
+	--- the canonical name, if this suggestion is an alias of a command
+	read alias_of: string?,
 }
 
 --[=[
@@ -341,12 +347,69 @@ function autocomplete.visit_var_root(state, node)
 	local suggestions: { Suggestion } = {}
 
 	if node.kind == "global" then
+		local global_metadata = state.vm.global_metadata
+
+		-- aliases share the type of the command they alias, so group every
+		-- name by its type once instead of rescanning for each global
+		local names_by_type: { [Type]: { string } } = {}
+		for name, type in global_metadata do
+			local names = names_by_type[type]
+			if names then
+				table.insert(names, name)
+			else
+				names_by_type[type] = { name }
+			end
+		end
+
+		-- metadata and sorted alias lists, computed at most once per type
+		local metadata_by_type: { [Type]: Metadata | false } = {}
+		local aliases_by_type: { [Type]: { string } } = {}
+
 		for global in state.globals do
+			local type = global_metadata[global]
+			local metadata: Metadata? = nil
+			if type then
+				local cached = metadata_by_type[type]
+				if cached == nil then
+					cached = get_metadata_for(type) or false
+					metadata_by_type[type] = cached
+				end
+				metadata = cached or nil
+			end
+			local alias_of: string? = nil
+
+			if metadata then
+				if global ~= metadata.name then alias_of = metadata.name end
+
+				local aliases = aliases_by_type[type]
+				if alias_of == nil and aliases == nil then
+					aliases = {}
+					for _, other in names_by_type[type] do
+						if other ~= metadata.name then
+							table.insert(aliases, other)
+						end
+					end
+					table.sort(aliases)
+					aliases_by_type[type] = aliases
+				end
+
+				metadata = {
+					name = global,
+					description = metadata.description,
+					type = metadata.type,
+					alias_of = alias_of,
+					aliases = if alias_of == nil and #aliases > 0
+						then aliases
+						else nil,
+				}
+			end
+
 			table.insert(suggestions, {
 				kind = "expression" :: "expression",
 				text = global,
 				display = global,
-				metadata = get_metadata_for(state.vm.global_metadata[global]),
+				metadata = metadata,
+				alias_of = alias_of,
 			})
 		end
 	elseif node.kind == "name" then

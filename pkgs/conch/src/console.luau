@@ -22,13 +22,63 @@ local console: types.Console = {
 	output = print,
 }
 
+local function is_valid_name(name: string): boolean
+	return string.match(name, "^[%w_@:%-]+$") ~= nil
+end
+
 local function write_global(global: string, value: any)
 	assert(not IS_SERVER, "cannot set global on server")
-	assert(
-		string.match(global, "^[A-z%d%-@_:]*$"),
-		`{global} is not a valid name`
-	)
+	assert(is_valid_name(global), `'{global}' is not a valid name`)
 	language.set_command(vm, global, value)
+end
+
+-- maps every command name and alias to the name of the command that owns it
+local name_owners: { [string]: string } = {}
+
+--[=[
+Validates the name and aliases of a command before anything is registered,
+and claims them for the command. Returns a deduplicated copy of the aliases.
+]=]
+local function claim_names(name: string, aliases: { string }?): { string }
+	assert(is_valid_name(name), `{name} is not a valid name`)
+
+	local owner = name_owners[name]
+	assert(
+		owner == nil or owner == name,
+		`'{name}' is already used as an alias of '{owner}'`
+	)
+
+	local seen = { [name] = true }
+	local result = {}
+
+	for _, alias in aliases or {} do
+		assert(
+			is_valid_name(alias),
+			`alias '{alias}' of '{name}' is not a valid name`
+		)
+		if seen[alias] then continue end
+
+		local alias_owner = name_owners[alias]
+		assert(
+			alias_owner == nil or alias_owner == name,
+			`alias '{alias}' of '{name}' is already used by '{alias_owner}'`
+		)
+
+		seen[alias] = true
+		table.insert(result, alias)
+	end
+
+	-- release names from a previous registration of this command
+	for claimed, claimed_owner in name_owners do
+		if claimed_owner == name then name_owners[claimed] = nil end
+	end
+
+	name_owners[name] = name
+	for _, alias in result do
+		name_owners[alias] = name
+	end
+
+	return result
 end
 
 local function replicate_to_player(
@@ -52,6 +102,7 @@ local function replicate_to_player(
 		name = representation.name,
 		description = representation.description,
 		permissions = representation.permissions,
+		aliases = representation.aliases,
 		type = representation.type,
 	})
 end
@@ -109,8 +160,9 @@ local function cancel()
 	end
 end
 
-local map_remove_info: { [types.CommandRepresentation]: language.TypeAnalysisInfo } =
-	{}
+local map_remove_info: {
+	[types.CommandRepresentation]: { language.TypeAnalysisInfo },
+} = {}
 
 --[=[
 Determines which command is the valid overload to use in the case the command
@@ -229,20 +281,33 @@ local function set_command_from_representation(
 )
 	if map_remove_info[info] then return end
 
+	local infos = {}
+
 	write_global(info.name, info.callback)
+	table.insert(infos, language.attach_info(vm, false, info.name, info.type))
+
+	for _, alias in info.aliases do
+		write_global(alias, info.callback)
+		table.insert(infos, language.attach_info(vm, false, alias, info.type))
+	end
 
 	commands[info.name] = info
-	map_remove_info[info] =
-		language.attach_info(vm, false, info.name, info.type)
+	map_remove_info[info] = infos
 end
 
 local function unregister_command(info: types.CommandRepresentation)
 	if not map_remove_info[info] then return end
 
 	commands[info.name] = nil
-	map_remove_info[info]:remove()
+	for _, analysis_info in map_remove_info[info] do
+		analysis_info:remove()
+	end
 	map_remove_info[info] = nil
 	write_global(info.name, nil)
+
+	for _, alias in info.aliases do
+		write_global(alias, nil)
+	end
 end
 
 local function fix_arguments(args: { language.CommandArgument })
@@ -315,6 +380,7 @@ local function register_command<T...>(
 	info: {
 		permissions: { types.Permission },
 		description: string?,
+		aliases: { string }?,
 		arguments: () -> T...,
 		callback: (T...) -> ...any,
 	}
@@ -325,11 +391,13 @@ local function register_command<T...>(
 	local callback = info.callback
 	local type_information: language.Type =
 		from_arguments_or_overload(name, info.description, args)
+	local aliases = claim_names(name, info.aliases)
 
 	local representation: types.CommandRepresentation = {
 		name = name,
 		description = info.description,
 		permissions = info.permissions,
+		aliases = aliases,
 
 		type = type_information,
 
@@ -395,6 +463,10 @@ local function register_command<T...>(
 	end
 
 	if not IS_SERVER then
+		-- tear down a previous registration so its globals and aliases don't linger
+		local previous = state.local_commands[name]
+		if previous then unregister_command(previous.representation) end
+
 		if
 			state.local_user
 			and user.has_permissions(state.local_user, unpack(info.permissions))

@@ -114,6 +114,8 @@ return function()
 
 		input = string.gsub(input, `["'](.*)`, "%1", 1)
 
+		local matched_names = {}
+
 		for _, suggestion in suggestions do
 			if
 				not string.find(
@@ -131,20 +133,25 @@ return function()
 				string.lower(input)
 			)
 			if score == -math.huge then continue end
+			matched_names[suggestion.display] = true
 			table.insert(
 				filtered_suggestions,
 				{ suggestion = suggestion, score = score }
 			)
 		end
 
-		table.sort(
-			filtered_suggestions,
-			function(a, b) return a.score < b.score end
-		)
+		table.sort(filtered_suggestions, function(a, b)
+			if a.score ~= b.score then return a.score < b.score end
+			-- prefer the canonical name over an alias
+			return a.suggestion.alias_of == nil and b.suggestion.alias_of ~= nil
+		end)
 
 		local new_suggestions = {}
 
 		for idx, suggestion in filtered_suggestions do
+			-- hide aliases when the command they alias is already listed
+			local alias_of = suggestion.suggestion.alias_of
+			if alias_of and matched_names[alias_of] then continue end
 			table.insert(new_suggestions, suggestion.suggestion)
 		end
 
