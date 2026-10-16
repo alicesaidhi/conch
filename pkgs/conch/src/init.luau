@@ -5,6 +5,7 @@ local arguments = require "@self/arguments"
 local bootstrap = require "@self/bootstrap"
 local client = require "@self/client"
 local console = require "@self/console"
+local constants = require "@self/constants"
 local context = require "@self/context"
 local language = require "./roblox_packages/language"
 local net = require "@self/net"
@@ -100,7 +101,11 @@ local function invoke_server_command(
 		pop()
 		if not ok then
 			warn(...)
-			return fail(tostring((...)))
+			return fail(
+				if has_permissions(user, constants.FULL_OUTPUT_PERMISSION)
+					then tostring((...))
+					else nil
+			)
 		end
 
 		return net.server.fire_successful_invoke_reply(
