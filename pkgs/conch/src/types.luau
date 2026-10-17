@@ -30,6 +30,12 @@ export type AfterCommandRunContext = {
 	result: { unknown },
 }
 
+export type BeforeRunContext = {
+	who: User,
+	command: string,
+	arguments: { unknown },
+}
+
 export type CommandRepresentation = {
 	read name: string,
 	read description: string?,
