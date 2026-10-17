@@ -396,6 +396,7 @@ local function register_command<T...>(
 		description: string?,
 		aliases: { string }?,
 		guards: { (types.BeforeRunContext) -> string? }?,
+		cooldown: number?,
 		arguments: () -> T...,
 		callback: (T...) -> ...any,
 	}
@@ -414,6 +415,7 @@ local function register_command<T...>(
 		description = info.description,
 		permissions = info.permissions,
 		aliases = aliases,
+		cooldown = info.cooldown,
 
 		type = type_information,
 
