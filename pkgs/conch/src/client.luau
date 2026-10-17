@@ -158,7 +158,7 @@ local function register_command(data: net.RegisterCommandPacket)
 				-- print("unpacking with", data.results)
 				return unpack(reply.results)
 			else
-				error "something went wrong on the server"
+				error(reply.why or "something went wrong on the server", 0)
 			end
 		end,
 	})

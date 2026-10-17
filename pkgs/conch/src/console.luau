@@ -15,6 +15,17 @@ local IS_SERVER = RunService:IsServer()
 local vm = language.create_vm()
 local commands: { [string]: types.CommandRepresentation } = {}
 local after_run = signal()
+local before_run_hooks: { (types.BeforeRunContext) -> string? } = {}
+
+-- raised when a before_run hook blocks a command, so the server can tell it
+-- apart from an error in the callback
+local denied_mt = {
+	__tostring = function(self) return self.why end,
+}
+
+local function deny(why: string): never
+	error(setmetatable({ why = why }, denied_mt), 0)
+end
 
 local console: types.Console = {
 	vm = vm,
@@ -386,6 +397,7 @@ local function register_command<T...>(
 		description: string?,
 		aliases: { string }?,
 		group: string?,
+		cooldown: number?,
 		arguments: () -> T...,
 		callback: (T...) -> ...any,
 	}
@@ -404,6 +416,7 @@ local function register_command<T...>(
 		permissions = info.permissions,
 		aliases = aliases,
 		group = info.group,
+		cooldown = info.cooldown,
 
 		type = type_information,
 
@@ -437,11 +450,21 @@ local function register_command<T...>(
 				custom[i] = coerce_value_into_type(type.type, value)
 			end
 
+			local context = state.command_context[coroutine.running()]
+			local run_context: types.BeforeRunContext = {
+				who = context and context.executor,
+				command = name,
+				arguments = custom,
+			}
+
+			for _, hook in before_run_hooks do
+				local why = hook(run_context)
+				if why then deny(why) end
+			end
+
 			local results =
 				{ pcall(callback, unpack(custom, 1, select("#", ...))) }
 			local ok = table.remove(results, 1)
-
-			local context = state.command_context[coroutine.running()]
 
 			after_run:fire {
 				ok = ok,
@@ -453,7 +476,7 @@ local function register_command<T...>(
 
 			if not ok then
 				warn(unpack(results))
-				error(results[2], 0)
+				error(results[1], 0)
 			end
 
 			return unpack(results)
@@ -498,6 +521,30 @@ local function register(name: string, fn: (...any) -> ...any, ...: string)
 	})
 end
 
+--[=[
+Adds a hook that runs before every command registered by this host, after the
+arguments are converted. Returning a string blocks the command and shows the
+string to the executor. Returns a function that removes the hook.
+]=]
+local function before_run(hook: (types.BeforeRunContext) -> string?)
+	table.insert(before_run_hooks, hook)
+
+	return function()
+		local index = table.find(before_run_hooks, hook)
+		if index then table.remove(before_run_hooks, index) end
+	end
+end
+
+--[=[
+Returns the reason when the error was raised by a before_run hook.
+]=]
+local function get_denied_reason(err: unknown): string?
+	if typeof(err) == "table" and getmetatable(err :: any) == denied_mt then
+		return (err :: any).why
+	end
+	return nil
+end
+
 local function analyze(src: string, where: number): language.AnalysisResult?
 	return language.analyze(vm, src, where)
 end
@@ -512,6 +559,8 @@ return {
 	analyze = analyze,
 	write_global = write_global,
 	after_command_run = after_run,
+	before_run = before_run,
+	get_denied_reason = get_denied_reason,
 
 	set_command_from_representation = set_command_from_representation,
 	unset_command_from_representation = unregister_command,
