@@ -64,6 +64,7 @@ export function register<const T extends Type[], const V extends VarargType>(
 	props: {
 		description?: string,
 		aliases?: string[],
+		group?: string,
 		cooldown?: number,
 		permissions: string[],
 		arguments: () => LuaTuple<[...T, V]>,
@@ -80,6 +81,7 @@ export function register<const T extends Type[]>(
 	props: {
 		description?: string,
 		aliases?: string[],
+		group?: string,
 		cooldown?: number,
 		permissions: string[],
 		arguments: () => LuaTuple<T>,
@@ -96,6 +98,7 @@ export function register<const T extends VarargType>(
 	props: {
 		description?: string,
 		aliases?: string[],
+		group?: string,
 		cooldown?: number,
 		permissions: string[],
 		arguments: () => T,
@@ -112,6 +115,7 @@ export function register<const T extends Type>(
 	props: {
 		description?: string,
 		aliases?: string[],
+		group?: string,
 		cooldown?: number,
 		permissions: string[],
 		arguments: () => T,
@@ -128,6 +132,7 @@ export function register<const T extends OverloadType>(
 	props: {
 		description?: string,
 		aliases?: string[],
+		group?: string,
 		cooldown?: number,
 		permissions: string[],
 		arguments: () => T,

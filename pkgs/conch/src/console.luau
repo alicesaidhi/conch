@@ -114,6 +114,7 @@ local function replicate_to_player(
 		description = representation.description,
 		permissions = representation.permissions,
 		aliases = representation.aliases,
+		group = representation.group,
 		type = representation.type,
 	})
 end
@@ -395,6 +396,7 @@ local function register_command<T...>(
 		permissions: { types.Permission },
 		description: string?,
 		aliases: { string }?,
+		group: string?,
 		cooldown: number?,
 		arguments: () -> T...,
 		callback: (T...) -> ...any,
@@ -413,6 +415,7 @@ local function register_command<T...>(
 		description = info.description,
 		permissions = info.permissions,
 		aliases = aliases,
+		group = info.group,
 		cooldown = info.cooldown,
 
 		type = type_information,
