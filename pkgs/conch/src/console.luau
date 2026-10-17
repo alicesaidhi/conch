@@ -384,6 +384,7 @@ local function register_command<T...>(
 		permissions: { types.Permission },
 		description: string?,
 		aliases: { string }?,
+		cooldown: number?,
 		arguments: () -> T...,
 		callback: (T...) -> ...any,
 	}
@@ -401,6 +402,7 @@ local function register_command<T...>(
 		description = info.description,
 		permissions = info.permissions,
 		aliases = aliases,
+		cooldown = info.cooldown,
 
 		type = type_information,
 
@@ -450,7 +452,7 @@ local function register_command<T...>(
 
 			if not ok then
 				warn(unpack(results))
-				error(results[2], 0)
+				error(results[1], 0)
 			end
 
 			return unpack(results)
