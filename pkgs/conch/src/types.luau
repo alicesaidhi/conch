@@ -30,11 +30,18 @@ export type AfterCommandRunContext = {
 	result: { unknown },
 }
 
+export type BeforeRunContext = {
+	who: User,
+	command: string,
+	arguments: { unknown },
+}
+
 export type CommandRepresentation = {
 	read name: string,
 	read description: string?,
 	read permissions: { string },
 	read aliases: { string },
+	read cooldown: number?,
 	read callback: (...any) -> ...any,
 
 	read type: language.Type,
@@ -70,6 +77,13 @@ export type SignalPublic<T...> = {
 }
 
 export type Result = { type: "ok", results: unknown } | { type: "err" }
+
+export type Limits = {
+	--- Text from on_execution longer than this is dropped.
+	max_input_length: number?,
+	--- How many server commands each user can run per second.
+	max_invokes_per_second: number?,
+}
 
 export type Role = string
 export type Permission = string

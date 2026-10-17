@@ -44,6 +44,7 @@ export type InvokeReplyPacket =
 	| {
 		status: "err",
 		invoke_id: number,
+		why: string?,
 	}
 
 export type LogPacket = {
@@ -322,13 +323,18 @@ function net.server.fire_successful_invoke_reply(
 	remotes.invoke_server_command:FireClient(player, invoke_reply_packet)
 end
 
-function net.server.fire_failed_invoke_reply(player: Player, invoke_id: number)
+function net.server.fire_failed_invoke_reply(
+	player: Player,
+	invoke_id: number,
+	why: string?
+)
 	assert(net.server.initialized, "server not initialized")
 	assert_run_context "server"
 
 	local invoke_reply_packet: InvokeReplyPacket = {
 		status = "err",
 		invoke_id = invoke_id,
+		why = why,
 	}
 
 	remotes.invoke_server_command:FireClient(player, invoke_reply_packet)

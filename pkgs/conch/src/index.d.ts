@@ -64,6 +64,7 @@ export function register<const T extends Type[], const V extends VarargType>(
 	props: {
 		description?: string,
 		aliases?: string[],
+		cooldown?: number,
 		permissions: string[],
 		arguments: () => LuaTuple<[...T, V]>,
 		callback: (...arguments: [...InferTypes<T>, ...InferVarargType<V>]) => unknown,
@@ -79,6 +80,7 @@ export function register<const T extends Type[]>(
 	props: {
 		description?: string,
 		aliases?: string[],
+		cooldown?: number,
 		permissions: string[],
 		arguments: () => LuaTuple<T>,
 		callback: (...arguments: InferTypes<T>) => unknown,
@@ -94,6 +96,7 @@ export function register<const T extends VarargType>(
 	props: {
 		description?: string,
 		aliases?: string[],
+		cooldown?: number,
 		permissions: string[],
 		arguments: () => T,
 		callback: (...arguments: InferVarargType<T>) => unknown,
@@ -109,6 +112,7 @@ export function register<const T extends Type>(
 	props: {
 		description?: string,
 		aliases?: string[],
+		cooldown?: number,
 		permissions: string[],
 		arguments: () => T,
 		callback: (argument: InferType<T>) => unknown,
@@ -124,6 +128,7 @@ export function register<const T extends OverloadType>(
 	props: {
 		description?: string,
 		aliases?: string[],
+		cooldown?: number,
 		permissions: string[],
 		arguments: () => T,
 		callback: (...arguments: T extends OverloadType<infer O> ? InferTypes<O[number]['arguments']> : never) => unknown,
@@ -164,6 +169,15 @@ export function has_permissions(user: User, ...permissions: string[]): boolean;
  * @description This overwrites the existing permissions of a role. You should only run this when you are initializing the server.
  */
 export function set_role_permissions(role: string, ...permissions: string[]): void;
+/**
+ * Sets the limits on what clients can send to the server. Every limit is off until it is set, and calling this again replaces all of them.
+ * 
+ * @description `max_input_length` drops longer text before it reaches on_execution. `max_invokes_per_second` limits how many server commands each user can run per second. Per-command limits go in the `cooldown` field of `register`, in seconds per user.
+ */
+export function set_limits(limits: {
+	max_input_length?: number,
+	max_invokes_per_second?: number,
+}): void;
 /**
  * Gives the user the given tuple of roles.
  * 
@@ -212,6 +226,18 @@ export function on_command_run(
 		arguments: unknown[],
 		result: unknown[]
 	}) => void
+): () => void;
+/**
+ * Calls the given function before a command registered by the host runs, after the permission check and argument conversion. Returning a string blocks the command and shows the string to the executor as an error.
+ * 
+ * @description On the server, it only gets called for commands registered by the server. Blocked commands do not reach on_command_run.
+ */
+export function before_run(
+	fn: (ctx: {
+		who: User,
+		command: string,
+		arguments: unknown[]
+	}) => string | undefined
 ): () => void;
 /**
  * Calls the given function whenever a player executes something.
