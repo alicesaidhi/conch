@@ -24,6 +24,10 @@ export type RegisterCommandPacket = {
 	type: language.Type,
 }
 
+export type UnregisterCommandPacket = {
+	name: string,
+}
+
 export type InvokeCommandPacket = {
 	name: string,
 	invoke_id: number,
@@ -54,6 +58,7 @@ export type RemoteIndex = {
 	update_user_roles: RemoteEvent,
 	update_role_permissions: RemoteEvent,
 	register_command: RemoteEvent,
+	unregister_command: RemoteEvent,
 	log: RemoteEvent,
 	log_command: RemoteEvent,
 
@@ -124,6 +129,7 @@ function net.server.init()
 		update_user_roles = remote "update_user_roles",
 		update_role_permissions = remote "update_role_permissions",
 		register_command = remote "register_command",
+		unregister_command = remote "unregister_command",
 		log = remote "log",
 		log_command = remote "log_command",
 
@@ -150,6 +156,7 @@ function net.client.init()
 		update_user_roles = remote "update_user_roles",
 		update_role_permissions = remote "update_role_permissions",
 		register_command = remote "register_command",
+		unregister_command = remote "unregister_command",
 		log = remote "log",
 		log_command = remote "log_command",
 
@@ -193,6 +200,15 @@ function net.client.on_command_registered(callback: (
 	assert_run_context "client"
 
 	remotes.register_command.OnClientEvent:Connect(callback :: any)
+end
+
+function net.client.on_command_unregistered(callback: (
+	info: UnregisterCommandPacket
+) -> ())
+	assert(net.client.initialized, "client not initialized")
+	assert_run_context "client"
+
+	remotes.unregister_command.OnClientEvent:Connect(callback :: any)
 end
 
 function net.client.on_role_info_received(
@@ -271,6 +287,13 @@ function net.server.fire_register_command(
 	assert_run_context "server"
 
 	remotes.register_command:FireClient(player, info)
+end
+
+function net.server.fire_unregister_command(info: UnregisterCommandPacket)
+	assert(net.server.initialized, "server not initialized")
+	assert_run_context "server"
+
+	remotes.unregister_command:FireAllClients(info)
 end
 
 function net.server.on_command_invoke(callback: (
