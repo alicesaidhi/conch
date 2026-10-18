@@ -333,7 +333,9 @@ return component(function(p: {
 					task.delay(0, raw_text, "")
 				end,
 
-				focused = state.focused,
+				-- a closed ui never takes focus, even when the textbox is
+				-- created again after a command finishes
+				focused = function() return state.opened() and state.focused() end,
 				update_focused = state.focused,
 
 				changed("Text", p.update_text),

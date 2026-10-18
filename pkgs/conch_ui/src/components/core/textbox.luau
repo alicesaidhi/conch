@@ -125,6 +125,8 @@ return component(function(
 				local value = read(p.focused)
 				if textbox:IsFocused() == value then return end
 				task.delay(0, function()
+					-- the value can change back before the delay is over
+					if read(p.focused) ~= value then return end
 					if value then
 						textbox:CaptureFocus()
 					else
