@@ -43,6 +43,15 @@ export type CommandContext = {
 };
 
 /**
+ * Runs before the callback of the command it is given to, after the before_run hooks. Returning a string blocks the command and shows the string to the executor as an error.
+ */
+export type Guard = (ctx: {
+	who: User,
+	command: string,
+	arguments: unknown[],
+}) => string | undefined;
+
+/**
  * Executes the given text.
  * 
  * @description Outputs an error into the console if it's not enabled.
@@ -65,6 +74,7 @@ export function register<const T extends Type[], const V extends VarargType>(
 		description?: string,
 		aliases?: string[],
 		group?: string,
+		guards?: Guard[],
 		cooldown?: number,
 		permissions: string[],
 		arguments: () => LuaTuple<[...T, V]>,
@@ -82,6 +92,7 @@ export function register<const T extends Type[]>(
 		description?: string,
 		aliases?: string[],
 		group?: string,
+		guards?: Guard[],
 		cooldown?: number,
 		permissions: string[],
 		arguments: () => LuaTuple<T>,
@@ -99,6 +110,7 @@ export function register<const T extends VarargType>(
 		description?: string,
 		aliases?: string[],
 		group?: string,
+		guards?: Guard[],
 		cooldown?: number,
 		permissions: string[],
 		arguments: () => T,
@@ -116,6 +128,7 @@ export function register<const T extends Type>(
 		description?: string,
 		aliases?: string[],
 		group?: string,
+		guards?: Guard[],
 		cooldown?: number,
 		permissions: string[],
 		arguments: () => T,
@@ -133,12 +146,19 @@ export function register<const T extends OverloadType>(
 		description?: string,
 		aliases?: string[],
 		group?: string,
+		guards?: Guard[],
 		cooldown?: number,
 		permissions: string[],
 		arguments: () => T,
 		callback: (...arguments: T extends OverloadType<infer O> ? InferTypes<O[number]['arguments']> : never) => unknown,
 	}
 ): void;
+/**
+ * Unregisters a command.
+ *
+ * @description Removes the command and its aliases. When called on the server, the command is removed from every client as well.
+ */
+export function unregister(name: string): void;
 /**
  * Registers the `license`, `print`, `info`, `warn` and `error` commands.
  */

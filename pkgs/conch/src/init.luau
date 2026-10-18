@@ -241,6 +241,7 @@ local function initiate_default_lifecycle()
 		net.client.init()
 
 		net.client.on_command_registered(client.register_command)
+		net.client.on_command_unregistered(client.unregister_command)
 		net.client.on_invoke_reply(client.receive_server_results)
 		net.client.on_log_received(client.log)
 		net.client.on_user_info_received(client.create_local_user)
@@ -300,6 +301,7 @@ return {
 
 	register_quick = console.register_quick,
 	register = console.register_command,
+	unregister = console.unregister,
 
 	on_execution = function(callback: (Player: Player, src: string) -> ())
 		local connection = net.server.on_log_command(function(player, log)

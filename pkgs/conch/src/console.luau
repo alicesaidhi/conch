@@ -47,6 +47,15 @@ end
 local name_owners: { [string]: string } = {}
 
 --[=[
+Releases the name and aliases claimed by a command.
+]=]
+local function release_names(name: string)
+	for claimed, owner in name_owners do
+		if owner == name then name_owners[claimed] = nil end
+	end
+end
+
+--[=[
 Validates the name and aliases of a command before anything is registered,
 and claims them for the command. Returns a deduplicated copy of the aliases.
 ]=]
@@ -80,9 +89,7 @@ local function claim_names(name: string, aliases: { string }?): { string }
 	end
 
 	-- release names from a previous registration of this command
-	for claimed, claimed_owner in name_owners do
-		if claimed_owner == name then name_owners[claimed] = nil end
-	end
+	release_names(name)
 
 	name_owners[name] = name
 	for _, alias in result do
@@ -397,6 +404,7 @@ local function register_command<T...>(
 		description: string?,
 		aliases: { string }?,
 		group: string?,
+		guards: { (types.BeforeRunContext) -> string? }?,
 		cooldown: number?,
 		arguments: () -> T...,
 		callback: (T...) -> ...any,
@@ -406,6 +414,7 @@ local function register_command<T...>(
 		{ info.arguments() } :: { language.CommandArgument | arguments.Overload }
 
 	local callback = info.callback
+	local guards = info.guards or {}
 	local type_information: language.Type =
 		from_arguments_or_overload(name, info.description, args)
 	local aliases = claim_names(name, info.aliases)
@@ -459,6 +468,11 @@ local function register_command<T...>(
 
 			for _, hook in before_run_hooks do
 				local why = hook(run_context)
+				if why then deny(why) end
+			end
+
+			for _, guard in guards do
+				local why = guard(run_context)
 				if why then deny(why) end
 			end
 
@@ -522,6 +536,31 @@ local function register(name: string, fn: (...any) -> ...any, ...: string)
 end
 
 --[=[
+Removes a command and its aliases. On the server, the command is removed from
+every client as well.
+]=]
+local function unregister(name: string)
+	if IS_SERVER then
+		if not commands[name] then return end
+		commands[name] = nil
+
+		-- every client, since one that lost the permission still keeps the
+		-- command and would add it back once it gets the permission again
+		if net.server.initialized then
+			net.server.fire_unregister_command { name = name }
+		end
+	else
+		local command = state.local_commands[name]
+		if not command then return end
+
+		unregister_command(command.representation)
+		state.local_commands[name] = nil
+	end
+
+	release_names(name)
+end
+
+--[=[
 Adds a hook that runs before every command registered by this host, after the
 arguments are converted. Returning a string blocks the command and shows the
 string to the executor. Returns a function that removes the hook.
@@ -553,6 +592,7 @@ return {
 	console = console,
 	register_quick = register,
 	register_command = register_command,
+	unregister = unregister,
 	replicate_to_player = replicate_to_player,
 	execute = execute,
 	cancel = cancel,

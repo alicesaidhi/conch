@@ -164,6 +164,10 @@ local function register_command(data: net.RegisterCommandPacket)
 	})
 end
 
+local function unregister_command(data: net.UnregisterCommandPacket)
+	console.unregister(data.name)
+end
+
 local function receive_server_results(data: net.InvokeReplyPacket)
 	local thread = state.continuations[data.invoke_id]
 	if not thread then return end
@@ -179,6 +183,7 @@ return {
 	update_user_roles = update_user_roles,
 	update_role_permissions = update_role_permissions,
 	register_command = register_command,
+	unregister_command = unregister_command,
 	receive_server_results = receive_server_results,
 	log = log,
 }
