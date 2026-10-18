@@ -361,6 +361,15 @@ end
 
 function autocomplete.visit_var_root(state, node)
 	if span_cursor(state, node.span) ~= "within" then return end
+	-- a word in a table argument is completed from the table's type instead
+	if
+		node.kind == "global"
+		and state.result
+		and state.result.replace.x == node.span.x
+		and state.result.replace.y == node.span.y
+	then
+		return
+	end
 	local replace_span = node.span
 	local suggestions: { Suggestion } = {}
 
@@ -740,6 +749,41 @@ local function fill_suggestions(
 		if not node then return end
 		if node.kind ~= "table" then return end
 
+		local suggestions = state.result.suggestions
+
+		local function fill_keys()
+			if not type.fields then return end
+
+			for key in type.fields do
+				table.insert(suggestions, {
+					kind = "assign",
+					metadata = nil,
+					text = key.value,
+					display = key.value,
+				})
+			end
+		end
+
+		-- a bare word in a table is read as a variable, so strings have to be
+		-- quoted there
+		local function fill_value(
+			value: ast.Expression | ast.ExpressionCommand?,
+			value_type: Type
+		)
+			local from = #suggestions + 1
+			fill_suggestions(state, value, value_type)
+
+			for i = from, #suggestions do
+				local suggestion = suggestions[i]
+				if suggestion.kind ~= nil then continue end
+
+				local quoted = table.clone(suggestion) :: any
+				quoted.kind = "expression"
+				quoted.text = string.format("%q", suggestion.text)
+				suggestions[i] = quoted
+			end
+		end
+
 		local elements = node.values.value
 		local item_idx = 1 -- refers to item idx in node, not type
 		local total_nokeys = 0 -- amount of no keys that have been seen
@@ -755,19 +799,24 @@ local function fill_suggestions(
 				item_idx = idx
 				break
 			elseif span_cursor(state, item.span) == "after" then
-				item_idx = idx
+				-- past the separator is the next field
+				item_idx = if item.separator then idx + 1 else idx
 			end
 		end
 
 		local item = elements[item_idx]
 
-		-- no node that matched an index was found, so resort to a number key.
+		-- no node that matched an index was found, so a new field is being
+		-- written: suggest the keys, or the value for the next number key.
 		if not item then
+			state.result.replace = vector.create(state.cursor, state.cursor)
+			fill_keys()
+
 			-- +1 because we start from 0 and no matching elemenmt was found
 			local field = from_fields_matching_literal(type, total_nokeys + 1)
 
 			if field == nil or type.fields == nil then return end
-			fill_suggestions(state, item, type.fields[field])
+			fill_value(nil, type.fields[field])
 			return
 		end
 
@@ -829,19 +878,10 @@ local function fill_suggestions(
 				elseif element.kind == "nokey" then element.span
 				else state.result.replace
 
-			if type.fields then
-				for key in type.fields do
-					table.insert(state.result.suggestions, {
-						kind = "assign",
-						metadata = nil,
-						text = key.value,
-						display = key.value,
-					})
-				end
-			end
+			fill_keys()
 
 			if type.indexer then
-				fill_suggestions(state, keyexpression :: any, type.indexer)
+				fill_value(keyexpression :: any, type.indexer)
 			end
 		end
 
@@ -880,7 +920,7 @@ local function fill_suggestions(
 				elseif element.kind == "nokey" then element.span
 				else state.result.replace
 
-			fill_suggestions(state, element.value, element_type)
+			fill_value(element.value, element_type)
 		end
 	elseif type.kind == "union" then
 		local possible_types = match(state, node, type)
