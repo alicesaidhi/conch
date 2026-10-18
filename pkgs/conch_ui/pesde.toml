@@ -8,7 +8,7 @@ lib = "src/init.luau"
 build_files = ["src"]
 
 [indices]
-default = "https://github.com/daimond113/pesde-index"
+default = "https://github.com/pesde-pkg/index"
 
 [wally_indices]
 default = "https://github.com/UpliftGames/wally-index"
