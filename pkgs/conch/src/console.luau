@@ -373,7 +373,14 @@ local function from_arguments_or_overload(
 			kind = "intersection",
 			fields = overloads,
 		}
-	elseif #args == 1 and first and first.kind == "intersection" then
+	elseif
+		#args == 1
+		and first
+		and first.kind == "intersection"
+		-- args.intersect also builds an intersection, but of argument types
+		and first.fields[1]
+		and first.fields[1].kind == "command"
+	then
 		for i, command in first.fields do
 			assert(
 				command.kind == "command",
