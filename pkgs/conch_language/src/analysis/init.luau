@@ -1129,7 +1129,8 @@ return {
 
 			for idx, suggestion in state.result.suggestions do
 				(suggestion :: any).text = wrap_if_necessary(suggestion)
-				deduplicate[suggestion.display] = suggestion
+				-- by what gets inserted, so `true` and "true" both stay
+				deduplicate[suggestion.text] = suggestion
 			end
 
 			for _, suggestion in deduplicate do
