@@ -435,6 +435,12 @@ t.TEST("treewalker", function()
 	}
 
 	CASE_TREE {
+		name = "expression binary associativity",
+		input = "meow (10 - 2 - 3) (8 / 2 / 2) (1 == 1 == true) (2 ^ 3 ^ 2)",
+		match = { 5, 2, true, 512 },
+	}
+
+	CASE_TREE {
 		name = "expression string",
 		input = "meow 'mrow'",
 		match = { "mrow" },
