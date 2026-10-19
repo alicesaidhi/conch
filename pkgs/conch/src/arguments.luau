@@ -909,7 +909,7 @@ local function struct<T, Indexer, Value>(
 	for key: any, value: any in pairs(input) do
 		fields[{
 			kind = "literal",
-			value = unwrap_type(key),
+			value = key,
 		} :: any] =
 			unwrap_type(value) :: any
 	end
