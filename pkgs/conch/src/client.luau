@@ -134,6 +134,7 @@ local function register_command(data: net.RegisterCommandPacket)
 		description = data.description,
 		permissions = data.permissions,
 		aliases = data.aliases,
+		group = data.group,
 		arguments = function()
 			if data.type.kind == "command" then
 				return unpack(data.type.arguments)

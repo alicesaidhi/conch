@@ -104,6 +104,7 @@ local function initiate_user_replication(user: types.User)
 			description = command.description,
 			permissions = command.permissions,
 			aliases = command.aliases,
+			group = command.group,
 			type = command.type,
 		})
 	end

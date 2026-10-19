@@ -73,6 +73,7 @@ export function register<const T extends Type[], const V extends VarargType>(
 	props: {
 		description?: string,
 		aliases?: string[],
+		group?: string,
 		guards?: Guard[],
 		cooldown?: number,
 		permissions: string[],
@@ -90,6 +91,7 @@ export function register<const T extends Type[]>(
 	props: {
 		description?: string,
 		aliases?: string[],
+		group?: string,
 		guards?: Guard[],
 		cooldown?: number,
 		permissions: string[],
@@ -107,6 +109,7 @@ export function register<const T extends VarargType>(
 	props: {
 		description?: string,
 		aliases?: string[],
+		group?: string,
 		guards?: Guard[],
 		cooldown?: number,
 		permissions: string[],
@@ -124,6 +127,7 @@ export function register<const T extends Type>(
 	props: {
 		description?: string,
 		aliases?: string[],
+		group?: string,
 		guards?: Guard[],
 		cooldown?: number,
 		permissions: string[],
@@ -141,6 +145,7 @@ export function register<const T extends OverloadType>(
 	props: {
 		description?: string,
 		aliases?: string[],
+		group?: string,
 		guards?: Guard[],
 		cooldown?: number,
 		permissions: string[],
