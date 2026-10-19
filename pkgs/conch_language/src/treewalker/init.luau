@@ -139,7 +139,7 @@ local function read_variable(
 
 	while active do
 		local value = active.vars[var]
-		if value then return active, value end
+		if value ~= nil then return active, value end
 		active = active.up
 	end
 

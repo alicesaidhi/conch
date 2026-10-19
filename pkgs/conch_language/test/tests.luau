@@ -629,6 +629,14 @@ if ($var == 1) {
 	}
 
 	CASE_TREE {
+		name = "false variable",
+		input = "var = false\n\z
+		if ($var == false) { var = true }\n\z
+		meow $var",
+		match = { true },
+	}
+
+	CASE_TREE {
 		name = "pemdas",
 		input = "n = 1 + 1 * 4\n\z
 		meow $n",
