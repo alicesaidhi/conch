@@ -28,6 +28,9 @@ local AUTO_SCROLL_DELAY = 0.4
 local AUTO_SCROLL_INTERVAL = 0.05
 
 local history_n = 0
+-- the line typed before browsing, kept out of state.history because
+-- get_history and on_history_changed hand that table out
+local draft = ""
 
 return component(function(p: {
 	working: () -> boolean,
@@ -122,10 +125,10 @@ return component(function(p: {
 			#analysis_result.suggestions == 0
 			and raw_text():find "\n" == nil
 		then
-			if history_n == 0 then history[history_n] = raw_text() end
+			if history_n == 0 then draft = raw_text() end
 
 			history_n = math.clamp(history_n - 1, 0, #history)
-			raw_text(history[history_n] or "")
+			raw_text(if history_n == 0 then draft else history[history_n] or "")
 			cursor_position(#raw_text() + 1)
 		else
 			selected_suggestion(
@@ -141,10 +144,10 @@ return component(function(p: {
 			#analysis_result.suggestions == 0
 			and raw_text():find "\n" == nil
 		then
-			if history_n == 0 then history[history_n] = raw_text() end
+			if history_n == 0 then draft = raw_text() end
 
 			history_n = math.clamp(history_n + 1, 0, #history)
-			raw_text(history[history_n] or "")
+			raw_text(if history_n == 0 then draft else history[history_n] or "")
 			cursor_position(#raw_text() + 1)
 		else
 			selected_suggestion(math.max(1, selected_suggestion() - 1))
