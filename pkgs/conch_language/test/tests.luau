@@ -326,6 +326,7 @@ local function CASE_TREE(p: {
 	name: string,
 	input: string,
 	match: { unknown } | (fn: (...any) -> boolean) -> (),
+	fails_with: string?,
 })
 	t.CASE(p.name)
 
@@ -362,6 +363,13 @@ local function CASE_TREE(p: {
 	end
 
 	local result = treewalker.execute(state, parsed.result)
+	if p.fails_with then
+		t.CHECK(
+			not result.ok
+				and string.find(result.err, p.fails_with, 1, true) ~= nil
+		)
+		return
+	end
 	if not result.ok then error(result.err) end
 
 	if type(p.match) == "function" then
@@ -631,6 +639,7 @@ if ($var == 1) {
 		name = "error",
 		input = "oop value",
 		match = {},
+		fails_with = "attempt to invoke a non-existent command: oop",
 	}
 end)
 
