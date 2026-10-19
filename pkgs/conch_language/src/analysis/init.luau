@@ -755,11 +755,24 @@ local function fill_suggestions(
 			if not type.fields then return end
 
 			for key in type.fields do
+				local name = key.value
+
+				-- a number key can only be written as [n] =
+				if typeof(name) == "number" then
+					table.insert(suggestions, {
+						kind = "expression" :: "expression",
+						metadata = nil,
+						text = `[{name}] =`,
+						display = `[{name}]`,
+					})
+					continue
+				end
+
 				table.insert(suggestions, {
 					kind = "assign",
 					metadata = nil,
-					text = key.value,
-					display = key.value,
+					text = name,
+					display = name,
 				})
 			end
 		end
