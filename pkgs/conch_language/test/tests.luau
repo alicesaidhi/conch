@@ -548,6 +548,22 @@ t.TEST("treewalker", function()
 	}
 
 	CASE_TREE {
+		name = "return value ending in ;",
+		input = "var = || { return 1, 2; }; meow (&$var)",
+		match = { 1, 2 },
+	}
+
+	CASE_TREE {
+		name = "return values over lines",
+		input = "var = || {\n\z
+			return 1 2,\n\z
+			3\n\z
+		}\n\z
+		meow (&$var)",
+		match = { 1, 2, 3 },
+	}
+
+	CASE_TREE {
 		name = "if and else statement",
 		input = "var = 2\n\z
 		if ($var == 1) { meow 2 } else { meow 3 }",
@@ -641,6 +657,16 @@ if ($var == 1) {
 		match = {},
 		fails_with = "attempt to invoke a non-existent command: oop",
 	}
+end)
+
+t.TEST("unparsed input", function()
+	local function CASE_PARSE_FAILS(name: string, input: string)
+		t.CASE(name)
+		t.CHECK_EXPECT_ERR(ast.parse, buffer.fromstring(input))
+	end
+
+	CASE_PARSE_FAILS("stray delimiter", "meow 1 ) meow 2")
+	CASE_PARSE_FAILS("statement after return", "return 1\nmeow 2")
 end)
 
 --todo: write tests for analysis but im lazy
