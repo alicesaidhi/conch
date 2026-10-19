@@ -102,6 +102,7 @@ local function pop_trace(state: ExecutionState) table.remove(state.trace) end
 
 local function reset_state(state: ExecutionState)
 	table.clear(state.trace)
+	state.last_statement = nil
 
 	while not state.scope.root do
 		state.scope = state.scope.up
@@ -176,7 +177,11 @@ local function call(state: ExecutionState, node: Node, fn: any, ...: any)
 			if name == true then nil else name,
 			node.span.z
 		)
+		local thread = coroutine.running()
+		local calling_machine = using_machine[thread]
+		using_machine[thread] = state
 		local result = table.pack(fn(...))
+		using_machine[thread] = calling_machine
 		pop_trace(state)
 		return result
 	end
@@ -321,7 +326,11 @@ local function evaluate_command(
 		)
 	end
 
-	return call(state, node, command, unpack(arguments))
+	local result = call(state, node, command, unpack(arguments))
+	-- how a lambda ended only matters to a for loop running it as its body
+	state.last_statement = nil
+
+	return result
 end
 
 local function evaluate_table(
@@ -585,12 +594,8 @@ local function evaluate_lambda(
 		local lstat = state.last_statement
 
 		if lstat then
-			if lstat.node.kind ~= "return" then
-				if calling_machine then
-					calling_machine.last_statement = lstat
-				end
-				return
-			end
+			if calling_machine then calling_machine.last_statement = lstat end
+			if lstat.node.kind ~= "return" then return end
 
 			return unpack(lstat.values, 1, #lstat.node.values)
 		end

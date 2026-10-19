@@ -660,6 +660,22 @@ if ($var == 1) {
 	}
 
 	CASE_TREE {
+		name = "for loop break in lambda",
+		input = "var = || { n = 0\n\z
+		for ({ 1, 2, 3 }) |key, value| { if ($value == 2) { break } n = $n + 1 }\n\z
+		return $n }\n\z
+		meow (&$var)",
+		match = { 1 },
+	}
+
+	CASE_TREE {
+		name = "for loop return",
+		input = "var = || { for ({ 1, 2, 3 }) |key, value| { return $value } }\n\z
+		meow (&$var)",
+		match = { 1 },
+	}
+
+	CASE_TREE {
 		name = "while loop",
 		input = "n = 0\n\z
 		while ($n < 10) { n = ($n + 1) }\n\z
