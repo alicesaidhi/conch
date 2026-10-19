@@ -561,19 +561,23 @@ local color_type = register_strange_type {
 
 local DURATION_TIMES: { [string]: number } = {
 	ms = 1e-3,
-	milisecond = 1e-3,
-	miliseconds = 1e-3,
+	millisecond = 1e-3,
+	milliseconds = 1e-3,
 
 	s = 1,
 	sec = 1,
+	secs = 1,
 	second = 1,
 	seconds = 1,
 
 	min = 60,
+	mins = 60,
 	minute = 60,
 	minutes = 60,
 
+	h = 60 * 60,
 	hr = 60 * 60,
+	hrs = 60 * 60,
 	hour = 60 * 60,
 	hours = 60 * 60,
 
@@ -581,6 +585,7 @@ local DURATION_TIMES: { [string]: number } = {
 	day = 60 * 60 * 24,
 	days = 60 * 60 * 24,
 
+	w = 60 * 60 * 24 * 7,
 	wk = 60 * 60 * 24 * 7,
 	week = 60 * 60 * 24 * 7,
 	weeks = 60 * 60 * 24 * 7,
@@ -595,16 +600,26 @@ local DURATION_TIMES: { [string]: number } = {
 	years = 60 * 60 * 24 * 365,
 }
 
+-- old spellings that still parse but aren't suggested
+local DURATION_ALIASES: { [string]: number } = {
+	milisecond = 1e-3,
+	miliseconds = 1e-3,
+}
+
 local function parse_duration(text: unknown)
 	if typeof(text) ~= "string" then error "cannot parse non string" end
 
-	local words = string.split(text, " ")
+	if not string.find(text, "%S") then
+		error(`could not convert "{text}" into a duration`, 0)
+	end
+
 	local n = 0
 
-	for _, word in words do
+	for word in string.gmatch(text, "%S+") do
 		local duration_string, suffix = string.match(word, `(.-)[%s]?([A-z]+)$`)
 		if duration_string and suffix then
-			local mul = DURATION_TIMES[suffix]
+			local lower = string.lower(suffix)
+			local mul = DURATION_TIMES[lower] or DURATION_ALIASES[lower]
 			if not mul then error(`"{suffix}" is not a valid suffix`, 0) end
 			local duration = tonumber(duration_string)
 			if not duration then
@@ -637,13 +652,15 @@ local duration_type = register_strange_type {
 
 	suggestions = function(text: string)
 		local words = string.split(text:gsub(`"(.*)"`, "%1"), " ")
-		local last_word = words[#words] or "1"
+		-- a suffix on its own doesn't parse, so suggest it after a 1
+		local last_word = if words[#words] == "" then "1" else words[#words]
 
 		local suggestions: { language.Suggestion } = {}
 		local the_rest = table.concat(words, " ", 1, #words - 1)
 		local before, suffix = string.match(last_word, "(.-)([A-z]+)$")
 
 		if suffix then
+			if before == "" then before = "1" end
 			for example_suffix in DURATION_TIMES do
 				table.insert(suggestions, {
 					text = `{before}{example_suffix}`,
