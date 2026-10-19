@@ -471,6 +471,12 @@ t.TEST("treewalker", function()
 	}
 
 	CASE_TREE {
+		name = "expression and/or short-circuit",
+		input = "meow (false and (&error oops)) (1 or (&error oops))",
+		match = { false, 1 },
+	}
+
+	CASE_TREE {
 		name = "expression command",
 		input = "meow (&ping 12)",
 		match = { "pong", 12 },
