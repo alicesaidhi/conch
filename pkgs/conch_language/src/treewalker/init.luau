@@ -797,7 +797,9 @@ function visit_block(state: ExecutionState, node: ast.Block, inherit: boolean?)
 		if state.last_statement then break end
 	end
 
-	if node.last_statement then visit_lstat(state, node.last_statement) end
+	if node.last_statement and not state.last_statement then
+		visit_lstat(state, node.last_statement)
+	end
 
 	if not state.scope.up then return result end
 	state.scope = state.scope.up
