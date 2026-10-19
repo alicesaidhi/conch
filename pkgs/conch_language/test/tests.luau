@@ -541,6 +541,31 @@ t.TEST("treewalker", function()
 	}
 
 	CASE_TREE {
+		name = "lambda arguments",
+		input = "value = 1\n\z
+		var = |value| { }\n\z
+		$var 2\n\z
+		meow $value",
+		match = { 1 },
+	}
+
+	CASE_TREE {
+		name = "lambda recursion",
+		input = "fact = |n| { if ($n <= 1) { return 1 } else { return (&$fact ($n - 1)) * $n } }\n\z
+		meow (&$fact 5)",
+		match = { 120 },
+	}
+
+	CASE_TREE {
+		name = "lambda closures",
+		input = "make = |n| { return || { return $n } }\n\z
+		a = &$make 1\n\z
+		b = &$make 2\n\z
+		meow (&$a) (&$b)",
+		match = { 1, 2 },
+	}
+
+	CASE_TREE {
 		name = "if statement",
 		input = "var = 1\n\z
 		if ($var == 1) { meow 2 }",

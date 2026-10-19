@@ -555,16 +555,12 @@ local function evaluate_lambda(
 	state: ExecutionState,
 	node: ast.ExpressionLambda
 )
-	local original_scope = {
-		vars = state.scope.vars,
-		root = true,
-		up = state.scope.up,
-	}
+	local original_scope = state.scope
 
 	local function conch_guest_fn(...: any): ...unknown
 		local scope: Scope = {
-			vars = original_scope.vars,
-			up = original_scope.up,
+			vars = {},
+			up = original_scope,
 			root = true :: true,
 		}
 
