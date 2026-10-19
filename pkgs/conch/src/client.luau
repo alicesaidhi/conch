@@ -173,6 +173,8 @@ local function receive_server_results(data: net.InvokeReplyPacket)
 	if not thread then return end
 	-- print('received result for', data)
 	state.continuations[data.invoke_id] = nil
+	-- the run was cancelled while it waited
+	if coroutine.status(thread) == "dead" then return end
 	task.spawn(thread, data)
 end
 
