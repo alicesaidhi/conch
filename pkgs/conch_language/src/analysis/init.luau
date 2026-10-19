@@ -239,7 +239,25 @@ local function is_ident_char(c: number)
 		or c == char ":"
 end
 
+-- words the lexer reads as keywords instead of identifiers
+local keywords = {
+	["true"] = true,
+	["false"] = true,
+	["nil"] = true,
+	["if"] = true,
+	["else"] = true,
+	["elseif"] = true,
+	["while"] = true,
+	["for"] = true,
+	["return"] = true,
+	["break"] = true,
+	["continue"] = true,
+	["and"] = true,
+	["or"] = true,
+}
+
 local function is_identifier(input: string)
+	if keywords[input] then return false end
 	if is_start_ident_char(string.byte(input, 1, 1)) then
 		for i = 2, #input do
 			if not is_ident_char(string.byte(input, i, i)) then return false end
@@ -688,7 +706,10 @@ local function fill_suggestions(
 
 	if type.kind == "literal" then
 		table.insert(state.result.suggestions, {
-			kind = "expression" :: "expression",
+			-- strings get quoted when they aren't a bare word
+			kind = if typeof(type.value) == "string"
+				then nil
+				else "expression" :: "expression",
 			metadata = nil,
 			text = tostring(type.value),
 			display = tostring(type.value),
@@ -1108,7 +1129,8 @@ return {
 
 			for idx, suggestion in state.result.suggestions do
 				(suggestion :: any).text = wrap_if_necessary(suggestion)
-				deduplicate[suggestion.display] = suggestion
+				-- by what gets inserted, so `true` and "true" both stay
+				deduplicate[suggestion.text] = suggestion
 			end
 
 			for _, suggestion in deduplicate do
