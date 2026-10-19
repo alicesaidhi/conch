@@ -36,6 +36,10 @@ local last_runs: { [types.User]: { [string]: number } } = {}
 setmetatable(invoke_buckets, { __mode = "k" })
 setmetatable(last_runs, { __mode = "k" })
 
+-- players that left, so a late get_user doesn't store a user for them again
+local departed: { [Player]: true } = {}
+setmetatable(departed, { __mode = "k" })
+
 --[=[
 Takes one invoke from the user's token bucket, which refills at
 max_invokes_per_second. Returns false when the bucket is empty.
@@ -122,13 +126,26 @@ local function get_user(key: Player | string)
 		local user_key = user.obtain_user_key(key, key.DisplayName)
 		local self = state.users[user_key]
 
-		if not self then
-			local user = create_user { name = key.DisplayName, player = key }
-			initiate_user_replication(user)
-			return user
-		else
-			return self
+		if self and self.player == key then return self end
+
+		if departed[key] then
+			return {
+				id = user_key,
+				name = key.DisplayName,
+				player = key,
+
+				disconnected = true,
+				dirty = false,
+				roles = {},
+			}
 		end
+
+		-- left over from an earlier Player with the same UserId
+		if self then disconnect_user(self) end
+
+		local user = create_user { name = key.DisplayName, player = key }
+		initiate_user_replication(user)
+		return user
 	end
 end
 
@@ -226,11 +243,13 @@ local function on_ready(player: Player)
 end
 
 local function disconnect_user_for_player(player: Player)
+	departed[player] = true
+	already_ready[player] = nil
+
 	local key = user.obtain_user_key(player, player.DisplayName)
 	local self = state.users[key]
 
-	if not self then return end
-	already_ready[player] = nil
+	if not self or self.player ~= player then return end
 
 	disconnect_user(self)
 end
