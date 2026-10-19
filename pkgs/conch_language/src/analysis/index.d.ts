@@ -8,11 +8,11 @@ export type Metadata = {
 	aliases?: string[]
 }
 
-type SimpleValue = number | string | boolean
+export type SimpleValue = number | string | boolean
 
 export type Suggestion = {
 	kind?: "expression" | "assign",
-	replace: vector,
+	replace?: vector,
 	text: string,
 	display: string,
 	metadata?: Metadata,
@@ -49,15 +49,15 @@ export type IntersectionType = {
 export type TableType = {
 	kind: "table",
 
-	fields_metadata?: Map<LiteralType, { description: string }>,
+	fields_metadata?: Map<LiteralType, { description?: string }>,
 	fields?: Map<LiteralType, Type>,
 	indexer?: Type,
-	value: Type
+	value?: Type
 }
 
 export type FunctionType = {
 	kind: "function",
-	argument_namess: string[]
+	argument_names: string[]
 }
 
 export type CommandArgument = {
@@ -76,35 +76,39 @@ export type CommandType = {
 
 export type Type = | LiteralType | TableType | StrangeType | FunctionType | CommandType | IntersectionType | UnionType
 
-export type AnalysisArgument = {
-	kind: "literal",
-	name: string,
-	description?: string,
-	value: string | boolean,
-	optional: boolean,
-} | {
-	kind: "argument",
-	name: string,
-	description?: string,
-	type: string,
-	unique_identifier: string,
+export type AnalysisResult = {
+	replace: vector,
+	suggestions: Suggestion[],
+	issues: Issue[],
+	additional_info?: {
+		name: string,
+		description?: string,
+		type: string,
+	},
+};
 
-	suggestions?: (text: string) => Suggestion[],
-
-	optional: boolean,
-	vararg: boolean,
+export type TypeAnalysisInfo = {
+	remove(): void,
 }
 
-export type AnalysisResult = {
-	result?: {
-		replace: vector,
-		suggestions: Suggestion[],
-		additional_info?: {
-			name: string,
-			description: string,
-			optional: boolean,
-			type: string,
-		},
-	},
-	issues: Issue[],
-};
+export type Scope = {
+	up?: Scope,
+	root: boolean,
+	vars: Record<string, unknown>,
+}
+
+export type ExecutionState = {
+	globals: Record<string, unknown>,
+	scope: Scope,
+}
+
+export type LanguageVm = {
+	global_metadata: Record<string, Type>,
+	vars_metadata: Record<string, Type>,
+
+	state: ExecutionState,
+}
+
+export type RunResult =
+	| { ok: true, values?: unknown[] }
+	| { ok: false, why: string[] }

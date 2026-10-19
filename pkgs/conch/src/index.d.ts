@@ -1,20 +1,21 @@
-import type { AnalysisArgument, AnalysisResult } from "@rbxts/conch-language"
+import type {
+	AnalysisResult,
+	LanguageVm,
+	StrangeType,
+	Suggestion,
+	Type as LanguageType,
+} from "@rbxts/conch-language"
 
 export type Type<T = unknown> = {
 	readonly __brand_Type: T,
 };
 export type TypeCtor<T = unknown> = (name?: string, description?: string) => Type<T>;
 
-type RegisterData<T> = {
-	convert: (from: unknown) => T,
-	analysis: AnalysisArgument
-}
-type RegisterableType<T = unknown> = Type<T> & RegisterData<T>
-
 type InferType<T extends Type> = T extends Type<infer U> ? U : never;
 type InferTypes<T extends Type[]> = {
 	[K in keyof T]: InferType<T[K]>;
 };
+type UnionToIntersection<U> = (U extends unknown ? (arg: U) => void : never) extends (arg: infer I) => void ? I : never;
 
 export type VarargType<T extends unknown[] = unknown[]> = {
 	readonly __brand_VarargType: T;
@@ -22,10 +23,41 @@ export type VarargType<T extends unknown[] = unknown[]> = {
 // 💜 TypeScript
 type InferVarargType<T extends VarargType> = T extends VarargType<[...infer U]> ? [...U] : never;
 
-type Overload = { description: string, arguments: Type[] }
+type Overload = Type[]
 export type OverloadType<T extends Overload[] = Overload[]> = {
 	readonly __brand_OverloadType: T;
 }
+
+type StrangeTypeData<T> = {
+	type: string,
+	id: string,
+	convert?: (value: unknown) => T,
+	suggestions?: LanguageType | ((text: string) => Suggestion[]),
+	match?: LanguageType | ((value: unknown) => boolean),
+	exact_match?: LanguageType | ((value: unknown) => boolean),
+}
+
+export type Log = {
+	readonly kind: "normal" | "info" | "warn" | "error" | "success",
+	readonly text: string,
+};
+
+export type CommandRepresentation = {
+	readonly name: string,
+	readonly description?: string,
+	readonly permissions: string[],
+	readonly aliases: string[],
+	readonly cooldown?: number,
+	readonly callback: (...args: any[]) => unknown,
+	readonly type: LanguageType,
+	dirty_replicate: boolean,
+};
+
+export type Console = {
+	readonly vm: LanguageVm,
+	readonly commands: Record<string, CommandRepresentation>,
+	output: (log: Log) => void,
+};
 
 export type User = {
 	id: string,
@@ -52,11 +84,19 @@ export type Guard = (ctx: {
 }) => string | undefined;
 
 /**
+ * The version of conch.
+ */
+export const version: string;
+/**
  * Executes the given text.
  * 
  * @description Outputs an error into the console if it's not enabled.
  */
 export function execute(src: string): void;
+/**
+ * Cancels the command that is currently running, if there is one.
+ */
+export function cancel(): void;
 /**
  * Quickly registers a command by only having to pass a function.
  * 
@@ -80,7 +120,7 @@ export function register<const T extends Type[], const V extends VarargType>(
 		arguments: () => LuaTuple<[...T, V]>,
 		callback: (...arguments: [...InferTypes<T>, ...InferVarargType<V>]) => unknown,
 	}
-): void;
+): CommandRepresentation;
 /**
  * Registers a new command.
  * 
@@ -98,7 +138,7 @@ export function register<const T extends Type[]>(
 		arguments: () => LuaTuple<T>,
 		callback: (...arguments: InferTypes<T>) => unknown,
 	}
-): void;
+): CommandRepresentation;
 /**
  * Registers a new command.
  * 
@@ -116,7 +156,7 @@ export function register<const T extends VarargType>(
 		arguments: () => T,
 		callback: (...arguments: InferVarargType<T>) => unknown,
 	}
-): void;
+): CommandRepresentation;
 /**
  * Registers a new command.
  * 
@@ -134,7 +174,7 @@ export function register<const T extends Type>(
 		arguments: () => T,
 		callback: (argument: InferType<T>) => unknown,
 	}
-): void;
+): CommandRepresentation;
 /**
  * Registers a new command.
  * 
@@ -150,9 +190,9 @@ export function register<const T extends OverloadType>(
 		cooldown?: number,
 		permissions: string[],
 		arguments: () => T,
-		callback: (...arguments: T extends OverloadType<infer O> ? InferTypes<O[number]['arguments']> : never) => unknown,
+		callback: (...arguments: T extends OverloadType<infer O> ? InferTypes<O[number]> : never) => unknown,
 	}
-): void;
+): CommandRepresentation;
 /**
  * Unregisters a command.
  *
@@ -160,7 +200,9 @@ export function register<const T extends OverloadType>(
  */
 export function unregister(name: string): void;
 /**
- * Registers the `license`, `print`, `info`, `warn` and `error` commands.
+ * Registers the `print`, `sleep`, `set`, `info`, `warn` and `error` commands on the client.
+ * 
+ * @description The `license` command is always registered on the client, even without calling this.
  */
 export function register_default_commands(): void;
 /**
@@ -168,14 +210,30 @@ export function register_default_commands(): void;
  */
 export function initiate_default_lifecycle(): void;
 /**
- * Registers a type which can be replicated.
+ * Registers a strange type, which is a type that conch does not support by itself.
  * 
- * @description Types must be registered on both the server and client before the command using them is registered.
+ * @description Strange types must be registered on both the server and client with the same id before the command using them is registered. `convert` does not replicate, so a command converts its arguments where it is registered. Use `wrap_type` to turn it into an argument.
  */
-export function register_type<T>(
-	type: string,
-	data: RegisterData<T>
-): TypeCtor<T>;
+export function register_strange_type<T>(data: StrangeTypeData<T>): StrangeType & Type<T>;
+/**
+ * Returns the strange type registered with the given id.
+ */
+export function get_strange_type(id: string): StrangeType | undefined;
+/**
+ * Turns a type into a function that creates arguments of that type, like the ones in `args`.
+ * 
+ * @description The name defaults to one generated from the type.
+ */
+export function wrap_type<T = unknown>(type: (LanguageType & Type<T>) | LanguageType | undefined, name?: string, description?: string): TypeCtor<T>;
+/**
+ * Creates the plural form of a strange type, which accepts either a single value or a table of them.
+ * 
+ * @description The additional data is a second strange type that is accepted as well, like `@a` for players.
+ */
+export function pluralize_type<T = unknown>(
+	type: StrangeType,
+	additional?: Omit<StrangeTypeData<T[]>, "type" | "id">,
+): LanguageType & Type<T[]>;
 /**
  * Returns if the user has the required permissions to use a command.
  * 
@@ -219,17 +277,33 @@ export function get_user(key: string | Player): User;
 export function set_var(global: string, value: unknown): void;
 /**
  * Returns a command context which contains information about the executor.
+ * 
+ * @description Returns undefined outside of the thread a command runs in.
  */
-export function get_command_context(): CommandContext;
+export function get_command_context(): CommandContext | undefined;
 /**
  * Logs to the user using this command.
  * 
- * @description This automatically logs to the user running the command.
+ * @description This automatically logs to the user running the command. On the server, nothing is logged outside of the thread the command runs in.
  */
 export function log(
-	kind: "warn" | "info" | "error" | "normal",
+	kind: Log["kind"],
 	text: string,
 ): void;
+/**
+ * Logs to the given player.
+ * 
+ * @description On the client, this only logs when the player is the local player.
+ */
+export function log_to(
+	player: Player,
+	kind: Log["kind"],
+	text: string,
+): void;
+/**
+ * The console of this host, which holds the vm, the registered commands and the function used to output logs.
+ */
+export const console: Console;
 /**
  * Analyzes the given source and returns information about the given source code and gives suggestions for that position.
  */
@@ -266,8 +340,14 @@ export function on_execution(
 ): () => void;
 
 export namespace args {
+	/**
+	 * Lets a command take one of several argument lists. Exactly one of them must match the given arguments, so give them a different `literal` as the first argument when they would overlap.
+	 */
 	export function overload<const T extends Overload[]>(overloads: T): OverloadType<T>;
-	export function literal<const T>(literal: T, name?: string, description?: string): Type<T>;
+	/**
+	 * A type that only matches the exact value.
+	 */
+	export function literal<const T extends string | number | boolean | undefined>(value: T): Type<T>;
 
 	export const any: TypeCtor<any>;
 	export const string: TypeCtor<string>;
@@ -276,7 +356,6 @@ export namespace args {
 	export const numbers: TypeCtor<number[]>;
 	export const boolean: TypeCtor<boolean>;
 	export const booleans: TypeCtor<boolean[]>;
-	export const table: TypeCtor<Record<string | number, unknown>>;
 	export const vector: TypeCtor<vector>;
 	export const vectors: TypeCtor<vector[]>;
 	export const player: TypeCtor<Player>;
@@ -290,12 +369,50 @@ export namespace args {
 
 	export const duration: TypeCtor<number>;
 
-	export const userinput: TypeCtor<Enum.UserInputType>;
-
+	/**
+	 * Lets the argument take any amount of values. Only the last argument can be variadic.
+	 */
 	export function variadic<const T>(type: Type<T>): VarargType<T[]>;
-	export function optional<const T>(type: Type<T>): Type<T | undefined>;
-	export const opt: typeof optional;
+	/**
+	 * Lets the argument be left out, in which case it is undefined.
+	 */
+	export function opt<const T>(type: Type<T>): Type<T | undefined>;
 
-	export function enum_new<const T extends unknown[]>(options: T, name?: string, description?: string): RegisterableType<T[number]>;
-	export function enum_map<const V>(map: Record<string, V>, name?: string, description?: string): RegisterableType<V>;
+	/**
+	 * Creates an enum type from an array. The values are matched by themselves or by their string form.
+	 *
+	 * @description The id must be the same on the server and the client.
+	 */
+	export function enum_from_array<const T extends readonly unknown[]>(id: string, options: T, name?: string, description?: string): TypeCtor<T[number]>;
+	/**
+	 * Creates an enum type from a map, where the keys are typed and converted to their values.
+	 *
+	 * @description The id must be the same on the server and the client.
+	 */
+	export function enum_from_map<const V>(id: string, map: ReadonlyMap<string, V> | { readonly [key: string]: V }, name?: string, description?: string): TypeCtor<V>;
+	/**
+	 * Creates an enum type from a function that returns the options every time they are needed, so they can change while the game runs.
+	 *
+	 * @description The id must be the same on the server and the client.
+	 */
+	export function dynamic<V>(id: string, options: () => ReadonlyMap<unknown, V> | { readonly [key: string]: V }, name?: string, description?: string): TypeCtor<V>;
+	/**
+	 * Creates an enum type from an array of literals. Unlike `enum_from_array`, it replicates with the command and does not need to be registered on the client.
+	 */
+	export function static_enum_from_array<const T extends readonly (string | number | boolean)[]>(options: T, name?: string, description?: string): TypeCtor<T[number]>;
+
+	/**
+	 * A table type with the given fields, and optionally a type for the other keys and their values.
+	 */
+	export function struct<const T extends { readonly [key: string]: Type }>(fields: T): Type<{ [K in keyof T]: InferType<T[K]> }>;
+	export function struct<const T extends { readonly [key: string]: Type }, K extends string | number, V>(fields: T, indexer: Type<K>, value: Type<V>): Type<{ [F in keyof T]: InferType<T[F]> } & Record<K, V>>;
+
+	/**
+	 * A type that matches any of the given types.
+	 */
+	export function union<const T extends Type[]>(...types: T): Type<InferType<T[number]>>;
+	/**
+	 * A type that matches all of the given types.
+	 */
+	export function intersect<const T extends Type[]>(...types: T): Type<UnionToIntersection<InferType<T[number]>>>;
 }
