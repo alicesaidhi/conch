@@ -911,7 +911,8 @@ local function complete_function(
 	if not arg_type then return end
 
 	state.result = {
-		replace = arg_node.span,
+		replace = arg_node and arg_node.span
+			or vector.create(state.cursor, state.cursor, 0),
 		suggestions = {},
 		additional_info = {
 			name = arg_type,
