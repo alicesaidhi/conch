@@ -116,7 +116,7 @@ local function get_user(key: Player | string)
 		local self = state.users[user_key]
 
 		return if not self
-			then create_user { name = user_key, player = false }
+			then create_user { name = key, player = false }
 			else self
 	else
 		local user_key = user.obtain_user_key(key, key.DisplayName)
