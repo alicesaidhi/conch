@@ -118,13 +118,17 @@ return component(function(p: {
 		return before .. with .. " " .. after
 	end
 
+	-- a line recalled from history keeps the arrows on the history even when
+	-- it has suggestions, until it's edited
+	local function browsing_history(): boolean
+		if raw_text():find "\n" then return false end
+		if #p.filtered_suggestions() == 0 then return true end
+		return history_n ~= 0 and raw_text() == state.history[history_n]
+	end
+
 	local function move_down()
 		local history = state.history
-		local analysis_result = p.analysis()
-		if
-			#analysis_result.suggestions == 0
-			and raw_text():find "\n" == nil
-		then
+		if browsing_history() then
 			if history_n == 0 then draft = raw_text() end
 
 			history_n = math.clamp(history_n - 1, 0, #history)
@@ -139,11 +143,7 @@ return component(function(p: {
 
 	local function move_up()
 		local history = state.history
-		local analysis_result = p.analysis()
-		if
-			#analysis_result.suggestions == 0
-			and raw_text():find "\n" == nil
-		then
+		if browsing_history() then
 			if history_n == 0 then draft = raw_text() end
 
 			history_n = math.clamp(history_n + 1, 0, #history)
