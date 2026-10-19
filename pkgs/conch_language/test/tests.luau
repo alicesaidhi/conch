@@ -423,6 +423,12 @@ t.TEST("treewalker", function()
 	}
 
 	CASE_TREE {
+		name = "expression number underscores and bases",
+		input = "meow 1_000 0b101 0x1_F",
+		match = { 1000, 5, 31 },
+	}
+
+	CASE_TREE {
 		name = "expression evaluate",
 		input = "meow (1)",
 		match = { 1 },
