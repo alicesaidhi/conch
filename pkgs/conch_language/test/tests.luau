@@ -429,6 +429,13 @@ t.TEST("treewalker", function()
 	}
 
 	CASE_TREE {
+		name = "expression binary error",
+		input = "meow (1 + {})",
+		match = {},
+		fails_with = "attempt to add on number and table at 6:12",
+	}
+
+	CASE_TREE {
 		name = "expression binary",
 		input = "meow (1 + 1)",
 		match = { 2 },

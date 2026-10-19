@@ -1244,7 +1244,8 @@ local function parse(input: buffer): Output
 					right = rhs,
 					span = to_span(
 						expr and expr.span or nil,
-						binop and binop.span or nil
+						binop and binop.span or nil,
+						rhs and rhs.span or nil
 					),
 				}
 			end
