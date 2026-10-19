@@ -32,9 +32,7 @@ local limits: types.Limits = {}
 
 -- keyed by user, so the entries go away together with the user
 local invoke_buckets: { [types.User]: { tokens: number, at: number } } = {}
-local last_runs: { [types.User]: { [string]: number } } = {}
 setmetatable(invoke_buckets, { __mode = "k" })
-setmetatable(last_runs, { __mode = "k" })
 
 --[=[
 Takes one invoke from the user's token bucket, which refills at
@@ -55,28 +53,6 @@ local function take_invoke(user: types.User): boolean
 	if bucket.tokens < 1 then return false end
 	bucket.tokens -= 1
 	return true
-end
-
---[=[
-Returns how many seconds are left on the command's cooldown for the user.
-When none are left, the cooldown starts again.
-]=]
-local function use_cooldown(
-	user: types.User,
-	command: types.CommandRepresentation
-): number
-	local cooldown = command.cooldown
-	if not cooldown then return 0 end
-
-	local runs: { [string]: number } = last_runs[user] or {}
-	last_runs[user] = runs
-
-	local now = os.clock()
-	local last = runs[command.name]
-	if last and now - last < cooldown then return cooldown - (now - last) end
-
-	runs[command.name] = now
-	return 0
 end
 
 local function FOREACH<K, V>(t: { [K]: V }, fn: (value: V, key: K) -> ())
@@ -160,7 +136,7 @@ local function invoke_server_command(
 		return fail "you are running commands too quickly"
 	end
 
-	local remaining = use_cooldown(user, command)
+	local remaining = console.get_cooldown(user, command.name, command.cooldown)
 	if remaining > 0 then
 		return fail(`{command.name} is on cooldown for {math.ceil(remaining)}s`)
 	end
