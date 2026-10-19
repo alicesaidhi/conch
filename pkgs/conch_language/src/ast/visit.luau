@@ -477,6 +477,14 @@ local function visit_if_branch<State>(
 )
 	visitor.visit_if_branch(state, node)
 
+	if node.condition then
+		visit_delimited(visitor, state, visit_expr, node.condition)
+	end
+
+	if node.block then
+		visit_delimited(visitor, state, visit_block, node.block)
+	end
+
 	visitor.visit_if_branch_end(state, node)
 end
 
