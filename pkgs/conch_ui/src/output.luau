@@ -585,10 +585,12 @@ local function view_from(self: Stream, line_from: number)
 	buffer.copy(b, at, self.richtext, top_column, delta)
 	at += delta
 
-	for i = #self.active_tags, 1, -1 do
-		local active = self.active_tags[i]
-		if active.line > bottom_column then break end
-		pop_tag(active)
+	-- the tags still open where the window ends, not where the stream ends
+	local bottom_tags = self.start_tags_per_line[line_from + 1]
+		or self.active_tags
+
+	for i = #bottom_tags, 1, -1 do
+		pop_tag(bottom_tags[i])
 	end
 
 	return buffer.readstring(b, 0, at)
