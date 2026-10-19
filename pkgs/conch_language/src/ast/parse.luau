@@ -468,7 +468,8 @@ local function parse(input: buffer): Output
 		local kind = token.kind
 
 		if kind == "identifier" or kind == "number" or kind == "string" then
-			return token.text
+			-- expect_fatal passes a bare kind, which has no text
+			return token.text or kind
 		elseif token.kind == "error" then
 			return "error '" .. token.text .. "'"
 		else
