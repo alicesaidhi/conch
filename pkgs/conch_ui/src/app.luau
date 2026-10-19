@@ -118,16 +118,13 @@ return function()
 		local matched_names = {}
 
 		for _, suggestion in suggestions do
-			if
-				not string.find(
-					string.lower(suggestion.display),
-					string.gsub(input, "^%s", ""),
-					0,
-					true
-				)
-			then
-				continue
-			end
+			local start = string.find(
+				string.lower(suggestion.display),
+				string.gsub(input, "^%s", ""),
+				0,
+				true
+			)
+			if not start then continue end
 
 			local score = levenshtein_distance(
 				string.lower(suggestion.display),
@@ -137,11 +134,14 @@ return function()
 			matched_names[suggestion.display] = true
 			table.insert(
 				filtered_suggestions,
-				{ suggestion = suggestion, score = score }
+				{ suggestion = suggestion, score = score, prefix = start == 1 }
 			)
 		end
 
 		table.sort(filtered_suggestions, function(a, b)
+			-- every suggestion contains the input, so the distance alone would
+			-- only rank them by length
+			if a.prefix ~= b.prefix then return a.prefix end
 			if a.score ~= b.score then return a.score < b.score end
 			-- prefer the canonical name over an alias
 			return a.suggestion.alias_of == nil and b.suggestion.alias_of ~= nil

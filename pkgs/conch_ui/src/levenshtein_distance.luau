@@ -33,7 +33,7 @@ local function levenshtein_distance(strA: string, strB: string): number
 	for i = 1, rows do --If you initialized your matrix with 1s instead of 0s, start at 2 instead of 1 here
 		for j = 1, cols do
 			local substitution_cost = if string.byte(strA, i)
-					== string.byte(strB, i)
+					== string.byte(strB, j)
 				then 0
 				else 1
 
