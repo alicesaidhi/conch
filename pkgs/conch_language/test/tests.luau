@@ -483,6 +483,12 @@ t.TEST("treewalker", function()
 	}
 
 	CASE_TREE {
+		name = "expression table vectors",
+		input = "meow { [1, 2, 3], [7] }",
+		match = { { vector.create(1, 2, 3), vector.create(7, 0, 0) } },
+	}
+
+	CASE_TREE {
 		name = "expression var",
 		input = "var = 1; meow $var",
 		match = { 1 },
