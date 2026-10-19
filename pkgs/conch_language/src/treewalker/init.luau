@@ -221,19 +221,21 @@ local function get_value<T>(
 	elseif token.kind == "string" then
 		local text = string.sub(token.text, 2, -2)
 
-		text = string.gsub(
-			text,
-			"\\([0-9][0-9]?[0-9]?)",
-			function(value: string)
-				local code = tonumber(value)
+		-- one pass, so a backslash that comes out of `\\` can't start another
+		-- escape. the digits after the first one only belong to a `\ddd`.
+		text = string.gsub(text, "\\(.[0-9]?[0-9]?)", function(escape: string)
+			local first = string.sub(escape, 1, 1)
+			if string.match(first, "[0-9]") then
+				local code = tonumber(escape)
 				assert(code)
 				return string.char(code)
 			end
-		)
 
-		for key, value in slash_characters do
-			text = string.gsub(text, `\\{key}`, value)
-		end
+			local value = slash_characters[first]
+			return if value
+				then value .. string.sub(escape, 2)
+				else `\\{escape}`
+		end)
 
 		return text
 	elseif token.kind == "identifier" then
