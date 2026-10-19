@@ -316,6 +316,17 @@ t.TEST("basic expression and command parsing", function()
 	)
 end)
 
+t.TEST("display", function()
+	t.CASE "string"
+	t.CHECK(display.display_expression(astgen.expr_string "meow") == '"meow"')
+
+	t.CASE "var"
+	t.CHECK(
+		display.display_var(astgen.var(astgen.varroot_global "meow", {}))
+			== "meow"
+	)
+end)
+
 t.TEST("ast fuzz testing", function()
 	local ast = generate(1000)
 
