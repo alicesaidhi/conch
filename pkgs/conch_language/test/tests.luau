@@ -513,6 +513,12 @@ t.TEST("treewalker", function()
 	}
 
 	CASE_TREE {
+		name = "command nil arguments",
+		input = "meow 1 2 nil 4",
+		match = { 1, 2, nil, 4 },
+	}
+
+	CASE_TREE {
 		name = "lambda command",
 		input = "var = |value| { meow ($value + 1) }\n\z
 		$var 1",
