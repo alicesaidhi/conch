@@ -566,6 +566,13 @@ t.TEST("treewalker", function()
 	}
 
 	CASE_TREE {
+		name = "return local",
+		input = "var = || { value = 5; return $value }\n\z
+		meow (&$var)",
+		match = { 5 },
+	}
+
+	CASE_TREE {
 		name = "if statement",
 		input = "var = 1\n\z
 		if ($var == 1) { meow 2 }",

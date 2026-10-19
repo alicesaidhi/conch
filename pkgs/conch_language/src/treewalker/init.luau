@@ -30,7 +30,7 @@ export type ExecutionState = {
 	globals: { [string]: unknown },
 	trace: { Trace },
 	scope: Scope,
-	last_statement: { scope: Scope, node: ast.LastStatement }?,
+	last_statement: { node: ast.LastStatement, values: { unknown } }?,
 }
 
 type Expression = ast.Expression | ast.ExpressionCommand
@@ -582,26 +582,17 @@ local function evaluate_lambda(
 
 		visit_block(state, node.body.block.value)
 
-		if state.last_statement then
-			local lstat = state.last_statement.node
+		local lstat = state.last_statement
 
-			if lstat.kind ~= "return" then
+		if lstat then
+			if lstat.node.kind ~= "return" then
 				if calling_machine then
-					calling_machine.last_statement =
-						{ scope = scope, node = lstat }
+					calling_machine.last_statement = lstat
 				end
 				return
 			end
 
-			local values = {}
-
-			for idx, value in lstat.values do
-				local node = value.value
-				if not node then continue end
-				values[idx] = evaluate_expression(state, node)
-			end
-
-			return unpack(values, 1, #lstat.values)
+			return unpack(lstat.values, 1, #lstat.node.values)
 		end
 
 		return
@@ -765,7 +756,16 @@ local function visit_stat_if(state: ExecutionState, node: ast.If)
 end
 
 local function visit_lstat(state: ExecutionState, node: ast.LastStatement)
-	state.last_statement = { node = node, scope = state.scope }
+	local values = {}
+
+	if node.kind == "return" then
+		for idx, value in node.values do
+			if not value.value then continue end
+			values[idx] = evaluate_expression(state, value.value)
+		end
+	end
+
+	state.last_statement = { node = node, values = values }
 end
 
 local results = {}
@@ -842,19 +842,7 @@ local function execute(state: ExecutionState, ast: ast.Ast): ExecutionResult
 	if not lstat then return result_ok end
 	if lstat.node.kind ~= "return" then return result_ok end
 
-	result_ok.values = table.create(#lstat.node.values, nil :: unknown)
-	assert(result_ok.values)
-
-	for idx, value in lstat.node.values do
-		if not value.value then continue end
-
-		ok, err = pcall(evaluate_expression, state, value.value)
-		if not ok then
-			reset_state(state)
-			return { ok = false, err = err:gsub(PATTERN_REMOVE_TRACE, "") }
-		end
-		result_ok.values[idx] = err
-	end
+	result_ok.values = lstat.values
 
 	return result_ok
 end
