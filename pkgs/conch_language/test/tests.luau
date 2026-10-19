@@ -641,6 +641,13 @@ if ($var == 1) {
 		match = {},
 		fails_with = "attempt to invoke a non-existent command: oop",
 	}
+
+	CASE_TREE {
+		name = "error position",
+		input = "var = -{}",
+		match = {},
+		fails_with = "attempt to negate table at 6:9",
+	}
 end)
 
 --todo: write tests for analysis but im lazy
