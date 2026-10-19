@@ -145,6 +145,12 @@ local function invoke_server_command(
 		return player:Kick()
 	end
 
+	local args = {}
+	for i, arg in data.args do
+		if typeof(arg) ~= "table" then return player:Kick() end
+		args[i] = arg[1]
+	end
+
 	local user = get_user(player)
 	local command = console.console.commands[data.name]
 
@@ -182,14 +188,19 @@ local function invoke_server_command(
 			)
 		end
 
+		local results = {}
+		for i = 1, select("#", ...) do
+			results[i] = { (select(i, ...)) }
+		end
+
 		return net.server.fire_successful_invoke_reply(
 			player,
 			data.invoke_id,
-			{ ... }
+			results
 		)
 	end
 
-	return handle(pcall(command.callback, unpack(data.args)))
+	return handle(pcall(command.callback, unpack(args, 1, #data.args)))
 end
 
 local function resend_new_commands(user: types.User)
