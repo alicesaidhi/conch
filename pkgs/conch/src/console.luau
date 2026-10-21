@@ -220,6 +220,15 @@ local function determine_cmd_type(type: language.Type, ...: unknown)
 				field.kind == "command",
 				`cannot determine overload with type {field.kind}`
 			)
+			local last_argument = field.arguments[#field.arguments]
+			local is_vararg = if last_argument
+				then last_argument.varargs
+				else false
+
+			if not is_vararg and #field.arguments < select("#", ...) then
+				continue
+			end
+
 			local bad = false
 
 			for j, argument in field.arguments do
