@@ -27,8 +27,11 @@ local function create_signal<T...>(): types.Signal<T...>
 	end
 
 	function signal:fire(...: T...)
-		for _, connection in connections do
-			connection.callback(...)
+		for _, connection in table.clone(connections) do
+			if connection.disconnected then continue end
+
+			local ok, err = pcall(connection.callback, ...)
+			if not ok then warn(err) end
 		end
 	end
 
