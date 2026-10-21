@@ -66,6 +66,11 @@ local function FOREACH<K, V>(t: { [K]: V }, fn: (value: V, key: K) -> ())
 end
 
 local function set_role(role: types.Role, ...: types.Permission)
+	-- users with the role get the commands it now allows on the next resend
+	for _, user in state.users do
+		if table.find(user.roles, role) then user.dirty = true end
+	end
+
 	state.roles[role] = { ... }
 
 	if IS_SERVER then net.server.fire_update_role_perms(role, { ... }) end
