@@ -770,7 +770,8 @@ local players_type = pluralize(player_type, {
 			end
 
 			local players = Players:GetPlayers()
-			table.remove(players, table.find(players, ctx.executor.player))
+			local index = table.find(players, ctx.executor.player)
+			if index then table.remove(players, index) end
 			return players
 		else
 			error(`could not convert "{typeof(v)}" into players`)
