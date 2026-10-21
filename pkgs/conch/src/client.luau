@@ -148,7 +148,14 @@ local function register_command(data: net.RegisterCommandPacket)
 			invocation_id += 1
 			state.continuations[invocation_id] = thread
 
-			net.client.invoke_command(invocation_id, data.name, { ... })
+			-- each value goes in its own table, so a nil doesn't leave a hole
+			-- in the array that the remote or unpack would lose values at
+			local args = {}
+			for i = 1, select("#", ...) do
+				args[i] = { (select(i, ...)) }
+			end
+
+			net.client.invoke_command(invocation_id, data.name, args)
 
 			-- print("waiting for function to finish", data.name)
 			local reply = (coroutine.yield()) :: net.InvokeReplyPacket
@@ -156,7 +163,12 @@ local function register_command(data: net.RegisterCommandPacket)
 
 			if reply.status == "ok" then
 				-- print("unpacking with", data.results)
-				return unpack(reply.results)
+				local results = {}
+				for i, result in reply.results do
+					results[i] = result[1]
+				end
+
+				return unpack(results, 1, #reply.results)
 			else
 				error(reply.why or "something went wrong on the server", 0)
 			end

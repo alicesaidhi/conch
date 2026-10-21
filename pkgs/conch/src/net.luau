@@ -33,14 +33,14 @@ export type InvokeCommandPacket = {
 	name: string,
 	invoke_id: number,
 
-	args: { unknown },
+	args: { { unknown } },
 }
 
 export type InvokeReplyPacket =
 	{
 		status: "ok",
 		invoke_id: number,
-		results: { unknown },
+		results: { { unknown } },
 	}
 	| {
 		status: "err",
@@ -238,7 +238,7 @@ end
 function net.client.invoke_command(
 	invoke_id: number,
 	name: string,
-	args: { unknown }
+	args: { { unknown } }
 )
 	assert(net.client.initialized, "client not initialized")
 	assert_run_context "client"
@@ -310,7 +310,7 @@ end
 function net.server.fire_successful_invoke_reply(
 	player: Player,
 	invoke_id: number,
-	results: { unknown }
+	results: { { unknown } }
 )
 	assert(net.server.initialized, "server not initialized")
 	assert_run_context "server"
