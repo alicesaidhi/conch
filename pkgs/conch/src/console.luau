@@ -251,12 +251,14 @@ local function determine_cmd_type(type: language.Type, ...: unknown)
 
 		if #options > 1 then
 			error(
-				`could not determine valid overload for {options[1].name}, consider separating the command or introducing a literal to differentiate by?`
+				`could not determine valid overload for {options[1].name}, consider separating the command or introducing a literal to differentiate by?`,
+				0
 			)
 		end
 		if #options == 0 then
 			error(
-				`could not determine valid overload for {type.fields[1].name}, no options matched`
+				`could not determine valid overload for {type.fields[1].name}, no options matched`,
+				0
 			)
 		end
 
@@ -307,10 +309,12 @@ local function coerce_value_into_type(
 			return value
 		end
 	elseif type.kind == "table" then
-		assert(
-			typeof(value) == "table",
-			`not a table, should match table type but got {typeof(value)}`
-		)
+		if typeof(value) ~= "table" then
+			error(
+				`not a table, should match table type but got {typeof(value)}`,
+				0
+			)
+		end
 		local clone = {}
 		local declared = {}
 

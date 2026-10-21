@@ -167,7 +167,8 @@ local function generate_dynamic_options<K, V>(
 				return error(
 					`could not convert "{tostring(key)}" into a valid option, expected something like {(next(
 						fn()
-					))}`
+					))}`,
+					0
 				)
 			else
 				return value
@@ -272,7 +273,7 @@ local number_type = register_strange_type {
 
 	convert = function(x: unknown)
 		local value = tonumber(x)
-		if not value then error(`could not convert "{x}" to a number`) end
+		if not value then error(`could not convert "{x}" to a number`, 0) end
 		return value
 	end,
 	match = function(x: unknown) return type(x) == "number" end,
@@ -287,7 +288,7 @@ local string_type = register_strange_type {
 
 	convert = function(x: unknown)
 		local value = tostring(x)
-		if not value then error(`could not convert "{x}" to a string`) end
+		if not value then error(`could not convert "{x}" to a string`, 0) end
 		return value
 	end,
 	match = function(x: unknown) return type(x) == "string" end,
@@ -309,7 +310,7 @@ local boolean_type = register_strange_type {
 			local value = string.lower(x)
 			if value == "true" then return true end
 			if value == "false" then return false end
-			error(`could not convert "{x}" to a boolean`)
+			error(`could not convert "{x}" to a boolean`, 0)
 		else
 			return not not x
 		end
@@ -353,9 +354,9 @@ local vector_type = register_strange_type {
 				return vector.create(x or 0, y or 0, z or 0)
 			end
 
-			error(`could not convert "{typeof(v)}" into vector`)
+			error(`could not convert "{typeof(v)}" into vector`, 0)
 		else
-			error(`could not convert "{typeof(v)}" into vector`)
+			error(`could not convert "{typeof(v)}" into vector`, 0)
 		end
 	end,
 	match = function(v: unknown)
@@ -388,23 +389,21 @@ local player_type = register_strange_type {
 		local ctx = context.get_command_context()
 		if arg == "@s" then
 			return ctx and ctx.executor.player
-				or error "not executed by a player"
+				or error("not executed by a player", 0)
 		elseif typeof(arg) == "number" then
-			local player = assert(
-				Players:GetPlayerByUserId(arg),
-				`player with id {arg} is not in this server`
-			)
+			local player = Players:GetPlayerByUserId(arg)
+			if not player then
+				error(`player with id {arg} is not in this server`, 0)
+			end
 			return player
 		elseif typeof(arg) == "string" then
-			local player = assert(
-				Players:FindFirstChild(arg) :: Player,
-				`player "{arg}" is not valid`
-			)
+			local player = Players:FindFirstChild(arg) :: Player
+			if not player then error(`player "{arg}" is not valid`, 0) end
 			return player
 		elseif typeof(arg) == "Instance" and arg:IsA "Player" then
 			return arg
 		else
-			error(`unknown arg {arg}`)
+			error(`unknown arg {arg}`, 0)
 		end
 	end,
 
@@ -467,7 +466,7 @@ local userid_type = register_strange_type {
 		local ctx = context.get_command_context()
 		if arg == "@s" then
 			return ctx and ctx.executor.player and ctx.executor.player.UserId
-				or error "not executed by a player"
+				or error("not executed by a player", 0)
 		elseif typeof(arg) == "number" then
 			return arg
 		elseif typeof(arg) == "string" then
@@ -479,7 +478,7 @@ local userid_type = register_strange_type {
 		elseif typeof(arg) == "Instance" and arg:IsA "Player" then
 			return arg.UserId
 		else
-			error(`unknown arg {arg}`)
+			error(`unknown arg {arg}`, 0)
 		end
 	end,
 
@@ -542,7 +541,10 @@ local color_type = register_strange_type {
 				and typeof(value[2]) == "number"
 				and typeof(value[3]) == "number"
 			then Color3.fromRGB(value[1], value[2], value[3])
-			else error(`could not convert "{typeof(value)}" into Color3`)
+			else error(
+				`could not convert "{typeof(value)}" into Color3`,
+				0
+			)
 	end,
 
 	match = function(t: unknown)
@@ -607,7 +609,7 @@ local DURATION_ALIASES: { [string]: number } = {
 }
 
 local function parse_duration(text: unknown)
-	if typeof(text) ~= "string" then error "cannot parse non string" end
+	if typeof(text) ~= "string" then error("cannot parse non string", 0) end
 
 	if not string.find(text, "%S") then
 		error(`could not convert "{text}" into a duration`, 0)
@@ -791,7 +793,7 @@ local players_type = pluralize(player_type, {
 			if index then table.remove(players, index) end
 			return players
 		else
-			error(`could not convert "{typeof(v)}" into players`)
+			error(`could not convert "{typeof(v)}" into players`, 0)
 		end
 	end,
 
@@ -836,7 +838,7 @@ local userids_type = pluralize(userid_type, {
 
 			return users
 		else
-			error(`could not convert "{typeof(v)}" into players`)
+			error(`could not convert "{typeof(v)}" into players`, 0)
 		end
 	end,
 
