@@ -1103,13 +1103,13 @@ function autocomplete.visit_stat_command_end(state, node)
 	if span_cursor(state, node.var.root.span) ~= "within" then return end
 
 	table.insert(state.result.suggestions, {
-		kind = nil,
+		kind = "expression" :: "expression",
 		metadata = nil,
 		text = "for",
 		display = "for",
 	})
 	table.insert(state.result.suggestions, {
-		kind = nil,
+		kind = "expression" :: "expression",
 		metadata = nil,
 		text = "while",
 		display = "while",
