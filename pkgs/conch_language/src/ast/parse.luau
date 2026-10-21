@@ -89,20 +89,6 @@ local function parse(input: buffer): Output
 		}
 	end
 
-	local function eof(msg: string)
-		if pos >= len then
-			table.insert(
-				issues,
-				{ why = msg, span = vector.create(pos, pos, line) }
-			)
-			error({
-				result = nil,
-				issues = issues,
-			}, 0)
-		end
-		return false
-	end
-
 	local function bump_peek()
 		bump()
 		return peek()
@@ -148,10 +134,16 @@ local function parse(input: buffer): Output
 		local delim = peek()
 		local c = bump_peek()
 
-		while
-			c ~= delim and not eof("expected string to be finished at", pos)
-		do
-			if c == 0 or c == char "\n" or c == char "\r" then
+		while c ~= delim do
+			if pos >= len then
+				-- still a string so the rest of the input can be analyzed while
+				-- the string is being typed
+				table.insert(issues, {
+					why = "expected string to be finished at",
+					span = vector.create(pos, pos, line),
+				})
+				return "string"
+			elseif c == 0 or c == char "\n" or c == char "\r" then
 				return "error"
 			elseif c == char "\\" then
 				bump()

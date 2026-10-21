@@ -179,6 +179,25 @@ local slash_characters: { [string]: string } = {
 	['"'] = '"',
 }
 --[=[
+Checks if a string token ends with its closing quote. The lexer lets an
+unfinished string through so it can be completed while being typed.
+]=]
+local function is_closed_string(text: string): boolean
+	if #text < 2 or string.sub(text, -1) ~= string.sub(text, 1, 1) then
+		return false
+	end
+
+	-- an odd number of backslashes escapes the quote
+	local backslashes = 0
+	for i = #text - 1, 2, -1 do
+		if string.sub(text, i, i) ~= "\\" then break end
+		backslashes += 1
+	end
+
+	return backslashes % 2 == 0
+end
+
+--[=[
 Converts tokens into a value
 ]=]
 local function get_value<T>(token: ast.Token<ast.TokenKind>): unknown
@@ -186,7 +205,11 @@ local function get_value<T>(token: ast.Token<ast.TokenKind>): unknown
 		local n = tonumber(token.text)
 		return n or null
 	elseif token.kind == "string" then
-		local text = string.sub(token.text, 2, -2)
+		local text = string.sub(
+			token.text,
+			2,
+			if is_closed_string(token.text) then -2 else -1
+		)
 
 		text = string.gsub(
 			text,
