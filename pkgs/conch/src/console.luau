@@ -303,25 +303,31 @@ local function coerce_value_into_type(
 			`not a table, should match table type but got {typeof(value)}`
 		)
 		local clone = {}
+		local declared = {}
 
 		if type.fields then
 			for fieldkey, fieldvalue in type.fields do
 				if fieldkey.value == nil then continue end
 
 				local clone_value = rawget(value :: any, fieldkey.value)
+				declared[fieldkey.value] = true
 				clone[fieldkey.value] =
 					coerce_value_into_type(fieldvalue, clone_value)
 			end
 		end
 
-		if type.indexer and type.value then
-			for key, value in pairs(clone) do
-				if language.matches_type(key, type.indexer, true) then
-					clone[coerce_value_into_type(type.indexer, key)] =
-						coerce_value_into_type(type.value, value)
-				end
-			end
+		for key, field_value in pairs(value :: any) do
+			if declared[key] then continue end
+
+			local clone_key = if type.indexer
+				then coerce_value_into_type(type.indexer, key)
+				else key
+			clone[clone_key] = if type.value
+				then coerce_value_into_type(type.value, field_value)
+				else field_value
 		end
+
+		return clone
 	elseif type.kind == "union" then
 		for _, field in type.fields do
 			if not language.matches_type(value, field, true) then continue end
