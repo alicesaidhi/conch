@@ -636,6 +636,12 @@ if ($var == 1) {
 	}
 
 	CASE_TREE {
+		name = "string escapes",
+		input = [[meow "\\n" "\\t" "\\65" "\65\n" "\"\\"]],
+		match = { "\\n", "\\t", "\\65", "A\n", '"\\' },
+	}
+
+	CASE_TREE {
 		name = "error",
 		input = "oop value",
 		match = {},
