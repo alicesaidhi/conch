@@ -73,7 +73,10 @@ local function set_role(role: types.Role, ...: types.Permission)
 
 	state.roles[role] = { ... }
 
-	if IS_SERVER then net.server.fire_update_role_perms(role, { ... }) end
+	-- before initiate_default_lifecycle, on_ready sends every role instead
+	if IS_SERVER and net.server.initialized then
+		net.server.fire_update_role_perms(role, { ... })
+	end
 end
 
 local function initiate_user_replication(user: types.User)
