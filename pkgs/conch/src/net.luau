@@ -331,7 +331,21 @@ function net.server.fire_successful_invoke_reply(
 		results = results,
 	}
 
-	remotes.invoke_server_command:FireClient(player, invoke_reply_packet)
+	-- the client waits for a reply, so one has to go out even if this throws
+	local ok, err = pcall(
+		remotes.invoke_server_command.FireClient,
+		remotes.invoke_server_command,
+		player,
+		invoke_reply_packet
+	)
+	if not ok then
+		warn(err)
+		net.server.fire_failed_invoke_reply(
+			player,
+			invoke_id,
+			"the command ran, but its results couldn't be sent"
+		)
+	end
 end
 
 function net.server.fire_failed_invoke_reply(
