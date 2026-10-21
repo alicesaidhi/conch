@@ -297,6 +297,16 @@ function net.server.fire_unregister_command(info: UnregisterCommandPacket)
 	remotes.unregister_command:FireAllClients(info)
 end
 
+function net.server.fire_unregister_command_to(
+	player: Player,
+	info: UnregisterCommandPacket
+)
+	assert(net.server.initialized, "server not initialized")
+	assert_run_context "server"
+
+	remotes.unregister_command:FireClient(player, info)
+end
+
 function net.server.on_command_invoke(callback: (
 	player: Player,
 	command_invoke: InvokeCommandPacket

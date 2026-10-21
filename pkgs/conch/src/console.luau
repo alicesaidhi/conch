@@ -573,9 +573,24 @@ local function register_command<T...>(
 	}
 
 	if IS_SERVER then
+		local previous = commands[name]
+
 		for _, player in Players:GetPlayers() do
 			-- print("replicating to player", player)
 			replicate_to_player(player, representation)
+
+			-- a client that lost access would keep the previous registration
+			local player_user = state.users[user.obtain_user_key(player)]
+			if
+				previous
+				and player_user
+				and not user.has_permissions(
+					player_user,
+					unpack(info.permissions)
+				)
+			then
+				net.server.fire_unregister_command_to(player, { name = name })
+			end
 		end
 		commands[name] = representation
 	end
