@@ -27,6 +27,25 @@ local function deny(why: string): never
 	error(setmetatable({ why = why }, denied_mt), 0)
 end
 
+-- keyed by user, so the entries go away together with the user
+local last_runs: { [types.User]: { [string]: number } } = {}
+setmetatable(last_runs, { __mode = "k" })
+
+--[=[
+Returns how many seconds are left on the command's cooldown for the user.
+]=]
+local function get_cooldown(
+	who: types.User,
+	name: string,
+	cooldown: number?
+): number
+	local runs = last_runs[who]
+	local last = runs and runs[name]
+	if not cooldown or not last then return 0 end
+
+	return math.max(cooldown - (os.clock() - last), 0)
+end
+
 local console: types.Console = {
 	vm = vm,
 	commands = commands,
@@ -518,6 +537,20 @@ local function register_command<T...>(
 				if why then deny(why) end
 			end
 
+			-- the cooldown starts only once the callback runs, and is checked
+			-- again since converting the arguments can yield
+			if IS_SERVER and context and info.cooldown then
+				local remaining =
+					get_cooldown(context.executor, name, info.cooldown)
+				if remaining > 0 then
+					deny(`{name} is on cooldown for {math.ceil(remaining)}s`)
+				end
+
+				local runs = last_runs[context.executor] or {}
+				last_runs[context.executor] = runs
+				runs[name] = os.clock()
+			end
+
 			local results =
 				{ pcall(callback, unpack(custom, 1, select("#", ...))) }
 			local ok = table.remove(results, 1)
@@ -643,6 +676,7 @@ return {
 	after_command_run = after_run,
 	before_run = before_run,
 	get_denied_reason = get_denied_reason,
+	get_cooldown = get_cooldown,
 
 	set_command_from_representation = set_command_from_representation,
 	unset_command_from_representation = unregister_command,
