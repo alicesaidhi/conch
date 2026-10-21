@@ -240,6 +240,12 @@ local function determine_cmd_type(type: language.Type, ...: unknown)
 	error "no valid command; unreachable?"
 end
 
+local function display_value(value: unknown): string
+	return if typeof(value) == "string"
+		then string.format("%q", value)
+		else tostring(value)
+end
+
 --[=[
 Explores the given type until it finds an appropriate conversion function for
 the given value.
@@ -253,8 +259,18 @@ local function coerce_value_into_type(
 	elseif type.kind == "function" then
 		return value
 	elseif type.kind == "intersection" then
+		-- every part has to accept the value
+		for _, field in type.fields do
+			coerce_value_into_type(field, value)
+		end
 		return value
 	elseif type.kind == "literal" then
+		if value ~= type.value then
+			error(
+				`expected {display_value(type.value)}, got {display_value(value)}`,
+				0
+			)
+		end
 		return value
 	elseif type.kind == "strange" then
 		if type.convert then
@@ -292,6 +308,25 @@ local function coerce_value_into_type(
 			if not language.matches_type(value, field, true) then continue end
 			return coerce_value_into_type(field, value)
 		end
+
+		-- matching only looks at the luau type, so "5" still converts to a number
+		local reason
+		local names: { string } = {}
+		for _, field in type.fields do
+			local ok, result = pcall(coerce_value_into_type, field, value)
+			if ok then return result end
+
+			-- the error of a member the value looks like explains it best
+			if reason == nil and language.matches_type(value, field) then
+				reason = result
+			end
+			table.insert(names, arguments.obtain_type_name(field))
+		end
+
+		if reason then error(reason, 0) end
+
+		local expected = table.concat(names, " | ")
+		error(`could not convert {display_value(value)} into {expected}`, 0)
 	end
 	return value
 end
