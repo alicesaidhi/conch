@@ -1,4 +1,5 @@
 local ast = require "./ast"
+local to_number = require "./number"
 
 local function char(c: string): number return string.byte(c) :: number end
 
@@ -161,7 +162,6 @@ local function parse(input: buffer): Output
 
 	local function number(): "number" | "error"
 		local start = pos
-		local base = 10
 
 		local c: number = peek()
 
@@ -170,10 +170,8 @@ local function parse(input: buffer): Output
 
 			if c == char "x" or c == char "X" then
 				c = bump_peek()
-				base = 16
 			elseif c == char "b" or c == char "B" then
 				c = bump_peek()
-				base = 2
 			end
 		end
 
@@ -191,17 +189,7 @@ local function parse(input: buffer): Output
 			c = bump_peek()
 		end
 
-		local text: string
-		if base == 10 then
-			text = buffer.readstring(input, start, pos - start) :: string
-		else
-			text =
-				buffer.readstring(input, start + 2, pos - start - 2) :: string
-		end
-
-		text = string.gsub(text, "_", "")
-
-		if tonumber(text, base) then
+		if to_number(buffer.readstring(input, start, pos - start)) then
 			return "number"
 		else
 			return "error"

@@ -1,4 +1,5 @@
 local ast = require "./ast"
+local to_number = require "./ast/number"
 local treewalker = require "./treewalker"
 
 export type Metadata = {
@@ -202,7 +203,7 @@ Converts tokens into a value
 ]=]
 local function get_value<T>(token: ast.Token<ast.TokenKind>): unknown
 	if token.kind == "number" then
-		local n = tonumber(token.text)
+		local n = to_number(token.text)
 		return n or null
 	elseif token.kind == "string" then
 		local text = string.sub(

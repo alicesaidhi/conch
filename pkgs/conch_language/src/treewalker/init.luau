@@ -1,5 +1,6 @@
 local ast = require "./ast"
 local display = require "./ast/display"
+local to_number = require "./ast/number"
 
 type Node = {
 	read span: vector,
@@ -218,9 +219,9 @@ local function get_value<T>(
 	token: ast.Token<ast.TokenKind>
 ): unknown
 	if token.kind == "number" then
-		local n = tonumber(token.text)
+		local n = to_number(token.text)
 		if not n then
-			return throw(state, token, `{n} is not a valid number`)
+			return throw(state, token, `{token.text} is not a valid number`)
 		end
 		return n
 	elseif token.kind == "string" then
