@@ -888,9 +888,14 @@ return {
 	create_state = create_state,
 
 	execute = function(state: ExecutionState, ast: ast.Ast)
-		using_machine[coroutine.running()] = state
+		local thread = coroutine.running()
+		local outer = using_machine[thread]
+		-- a cancelled run never got to clean up after itself
+		if not outer then reset_state(state) end
+
+		using_machine[thread] = state
 		local result = execute(state, ast)
-		using_machine[coroutine.running()] = nil
+		using_machine[thread] = outer
 		return result
 	end,
 }
