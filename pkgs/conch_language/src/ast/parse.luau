@@ -894,7 +894,12 @@ local function parse(input: buffer): Output
 		local function parse_tablefield_namekey(): ast.TableFieldNameKey
 			local name = expect_fatal "identifier"
 			local equals = expect_fatal "="
-			local value = parse_expression_command()
+			-- a missing value is an issue instead of a panic, so the value
+			-- can still be completed while it's being typed
+			local value = if is_delimiter() or current_is ","
+				then nil
+				else parse_expression_command()
+			if not value then throw("expected expression", equals.span) end
 
 			return {
 				kind = "name_key",
@@ -1025,7 +1030,11 @@ local function parse(input: buffer): Output
 					values.value
 						and values.value[#values.value]
 						and values.value[#values.value].span,
-					values.right and values.right.span
+					values.right and values.right.span,
+					-- an unfinished table runs to the end of the input
+					if not values.right and current_kind == "eof"
+						then current_token.span
+						else nil
 				),
 			}
 		end
