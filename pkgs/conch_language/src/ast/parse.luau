@@ -53,7 +53,7 @@ export type Output = { issues: { Issue }, result: ast.Ast? }
 
 local function parse(input: buffer): Output
 	local pos = 0
-	local line = 0
+	local line = 1
 	local len = buffer.len(input)
 	local issues: { Issue } = {}
 
@@ -306,7 +306,7 @@ local function parse(input: buffer): Output
 			bump()
 			return "|"
 		elseif c == char "\n" then
-			bump()
+			bump_any()
 			return "\n"
 		elseif c == char ";" then
 			bump()

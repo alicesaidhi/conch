@@ -322,6 +322,12 @@ t.TEST("ast fuzz testing", function()
 	CASE_AST("fuzz", ast.block)
 end)
 
+t.TEST("line numbers", function()
+	t.CASE "statement on the third line"
+	local output = ast.parse(buffer.fromstring "meow\n\r\nmeow")
+	t.CHECK(output.result and output.result.block.body[2].span.z == 3)
+end)
+
 local function CASE_TREE(p: {
 	name: string,
 	input: string,
