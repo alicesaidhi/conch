@@ -917,7 +917,9 @@ local function parse(input: buffer): Output
 					),
 				}
 			else -- nokey vector
-				local first_separator = expect_fatal ","
+				local first_separator = if current_is ","
+					then expect_fatal ","
+					else nil
 				local values: ast.Separated<ast.Expression | ast.ExpressionCommand?> =
 					{
 						{
@@ -925,24 +927,30 @@ local function parse(input: buffer): Output
 							separator = first_separator,
 							span = to_span(
 								value and value.span,
-								first_separator.span
+								first_separator and first_separator.span
 							),
 						},
 					}
 
-				while not is_delimiter() do
+				while first_separator and not is_delimiter() do
 					skip_current()
 
 					local start = current_pos
 					local expression = parse_expression_command()
-					if not current_is "," then break end
-					local separator = expect_fatal ","
+					local separator = if current_is ","
+						then expect_fatal ","
+						else nil
 
 					table.insert(values, {
 						value = expression,
 						separator = separator,
-						span = vector.create(start, separator.span.y),
+						span = vector.create(
+							start,
+							separator and separator.span.y or start
+						),
 					})
+
+					if not separator then break end
 				end
 
 				local right = expect "]"
