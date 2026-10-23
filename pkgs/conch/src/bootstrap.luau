@@ -37,9 +37,9 @@ SOFTWARE.]]
 local function output(t: types.Log) console.console.output(t) end
 
 local function concat(...: string)
-	local t = { ... }
-	for i, v in t do
-		t[i] = tostring(v)
+	local t = table.pack(...)
+	for i = 1, t.n do
+		t[i] = tostring(t[i])
 	end
 	return table.concat(t, " ")
 end
