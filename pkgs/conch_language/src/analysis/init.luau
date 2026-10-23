@@ -551,16 +551,70 @@ local function from_description_match_literal(
 	return nil
 end
 
-local function get_type_name(type: Type?)
+local function get_type_name(type: Type?): string
 	if not type then
 		return "unknown"
 	elseif type.kind == "literal" then
 		return `{type.value}`
 	elseif type.kind == "strange" then
 		return type.type
-	else
-		return type.kind
+	elseif type.kind == "command" then
+		return "Command"
+	elseif type.kind == "function" then
+		return "Function"
+	elseif type.kind == "intersection" then
+		local fields = {}
+
+		for _, field in type.fields do
+			table.insert(fields, get_type_name(field))
+		end
+
+		return table.concat(fields, " & ")
+	elseif type.kind == "union" then
+		local fields = {}
+		local optional = false
+
+		for _, field in type.fields do
+			local name = get_type_name(field)
+
+			if field.kind == "literal" and field.value == nil then
+				optional = true
+			elseif not table.find(fields, name) then
+				-- plurals are a union of two types with the same name
+				table.insert(fields, name)
+			end
+		end
+
+		local name = table.concat(fields, " | ")
+
+		return if not optional
+			then name
+			elseif #fields == 0 then "nil"
+			elseif string.find(name, " [|&] ") then `({name})?`
+			else `{name}?`
+	elseif type.kind == "table" then
+		local keys = {}
+
+		if type.fields then
+			for key, value in type.fields do
+				table.insert(
+					keys,
+					`{get_type_name(key)} = {get_type_name(value)}`
+				)
+			end
+		end
+
+		if type.indexer and type.value then
+			table.insert(
+				keys,
+				`[{get_type_name(type.indexer)}] = {get_type_name(type.value)}`
+			)
+		end
+
+		return `\{ {table.concat(keys, ", ")} \}`
 	end
+
+	return "unknown"
 end
 
 -- using an evaluated value, check if it matches the given type

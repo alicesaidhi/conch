@@ -148,9 +148,11 @@ return component(function(
 				transparency = 0,
 
 				container {
-					w = 300, h = 24,
+					w = 300,
+					auto = "y",
 					order = 1,
-					flex = { direction = "row", justify = "between" },
+					-- a long type goes under the name instead of over it
+					flex = { direction = "row", justify = "between", wrap = true },
 					pad = { x = 4 },
 
 					text {
