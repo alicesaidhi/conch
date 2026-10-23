@@ -60,6 +60,9 @@ Obtains a stack trace for the called function, which can be used to help
 fix errors with commands
 ]=]
 local function get_stack_trace_info(trace: Trace)
+	-- debug.info would read a stack level from a number
+	if type(trace.fn) ~= "function" then return `` end
+
 	local fn_name = trace.fn_name
 
 	if not fn_name and trace.fn then
@@ -353,6 +356,10 @@ local function evaluate_table(
 			local key = evaluate_expression(state, token.key.value)
 			local value = evaluate_expression(state, token.value)
 
+			if key == nil or key ~= key then
+				return throw(state, field, `table index is {key}`)
+			end
+
 			t[key] = value
 		elseif token.kind == "name_key" then
 			if not token.value then return throw(state, field, "no value") end
@@ -561,7 +568,12 @@ local function evaluate_unary(
 	if node.operator.kind == "!" then
 		return not value
 	elseif node.operator.kind == "-" then
-		return -value
+		local ok, result = pcall(function() return -value end)
+
+		if not ok then
+			return throw(state, node, `attempt to negate {typeof(value)}`)
+		end
+		return result
 	else
 		return throw(state, node, `unsupported operator {node.operator}`)
 	end
@@ -654,11 +666,17 @@ function evaluate_expression(
 		local y = contents[2] and contents[2].value
 		local z = contents[3] and contents[3].value
 
-		return vector.create(
+		local ok, result = pcall(
+			vector.create,
 			if x then evaluate_expression(state, x) :: number else 0,
 			if y then evaluate_expression(state, y) :: number else 0,
 			if z then evaluate_expression(state, z) :: number else 0
 		)
+
+		if not ok then
+			return throw(state, node, "vector components must be numbers")
+		end
+		return result
 	else
 		return throw(state, node, `could not evaluate {node.kind}`)
 	end
@@ -676,6 +694,11 @@ local function visit_stat_for(state: ExecutionState, node: ast.For): unknown
 
 	if not value_node then return throw(state, node, "missing expression") end
 	local value: any = evaluate_expression(state, value_node)
+	local kind = type(value)
+
+	if kind ~= "table" and kind ~= "function" and kind ~= "userdata" then
+		return throw(state, node, `attempt to iterate over {typeof(value)}`)
+	end
 
 	if not body_node then return throw(state, node, "missing body") end
 	local body = evaluate_expression(state, body_node)
