@@ -399,8 +399,12 @@ local function evaluate_binary(
 		return throw(state, node, "missing rhs expression")
 	end
 	local left: any = evaluate_expression(state, node.left)
-	local right: any = evaluate_expression(state, node.right)
 	local operator = node.operator.kind
+
+	if operator == "and" and not left then return left end
+	if operator == "or" and left then return left end
+
+	local right: any = evaluate_expression(state, node.right)
 
 	if operator == "!=" then
 		return wrap_op(
