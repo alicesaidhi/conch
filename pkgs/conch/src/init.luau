@@ -79,25 +79,6 @@ local function set_role(role: types.Role, ...: types.Permission)
 	end
 end
 
-local function initiate_user_replication(user: types.User)
-	if not user.player then return end
-
-	for _, command in console.console.commands do
-		if not has_permissions(user, unpack(command.permissions)) then
-			continue
-		end
-
-		net.server.fire_register_command(user.player, {
-			name = command.name,
-			description = command.description,
-			permissions = command.permissions,
-			aliases = command.aliases,
-			group = command.group,
-			type = command.type,
-		})
-	end
-end
-
 local function get_user(key: Player | string)
 	if typeof(key) == "string" then
 		local user_key = user.obtain_user_key(false, key)
@@ -127,9 +108,7 @@ local function get_user(key: Player | string)
 		-- left over from an earlier Player with the same UserId
 		if self then disconnect_user(self) end
 
-		local user = create_user { name = key.DisplayName, player = key }
-		initiate_user_replication(user)
-		return user
+		return create_user { name = key.DisplayName, player = key }
 	end
 end
 
@@ -204,18 +183,34 @@ local function invoke_server_command(
 	return handle(pcall(command.callback, unpack(args, 1, #data.args)))
 end
 
+local already_ready = {}
+
+-- the registration each user's client last got, so a role change only sends
+-- the commands it newly allows
+local sent_commands: { [types.User]: { [string]: types.CommandRepresentation } } =
+	{}
+setmetatable(sent_commands, { __mode = "k" })
+
 local function resend_new_commands(user: types.User)
 	if not user.dirty then return end
 	if not user.player then return end
+	-- on_ready sends them all once the client is listening
+	if not already_ready[user.player] then return end
 
-	for _, cmd in console.console.commands do
+	local sent = sent_commands[user] or {}
+	sent_commands[user] = sent
+
+	for name, cmd in console.console.commands do
+		if sent[name] == cmd then continue end
+		if not has_permissions(user, unpack(cmd.permissions)) then continue end
+
 		console.replicate_to_player(user.player, cmd)
+		sent[name] = cmd
 	end
 
 	user.dirty = false
 end
 
-local already_ready = {}
 local function on_ready(player: Player)
 	if already_ready[player] then return end
 
