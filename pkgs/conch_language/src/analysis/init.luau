@@ -1070,7 +1070,18 @@ local function choose_command(
 end
 
 function autocomplete.visit_command(state, node)
-	if span_cursor(state, node.span) ~= "within" then return end
+	local cursor_at = span_cursor(state, node.span)
+	if cursor_at == "before" then return end
+	-- the span stops at the last argument, but the next one is typed after it
+	if
+		cursor_at == "after"
+		and string.find(
+			string.sub(state.input, node.span.y + 1, state.cursor),
+			"[^ \t\r]"
+		)
+	then
+		return
+	end
 	if span_cursor(state, node.var.span) ~= "after" then return end
 	local root = node.var.root
 	if #node.var.suffixes > 0 then return end
