@@ -55,16 +55,16 @@ local function compare_separated<T>(
 	local idx = math.max(#a, #b)
 
 	for i = 1, idx do
-		if type(a[idx].separator) ~= type(b[idx].separator) then
-			throw("missing separator", a[idx].separator, b[idx].separator)
-		end
-
-		if a[idx] == nil or b[idx] == nil then
-			throw("missing value", a[idx], b[idx])
+		if a[i] == nil or b[i] == nil then
+			throw("missing value", a[i], b[i])
 			continue
 		end
 
-		fn(a[idx].value, b[idx].value)
+		if type(a[i].separator) ~= type(b[i].separator) then
+			throw("missing separator", a[i].separator, b[i].separator)
+		end
+
+		fn(a[i].value, b[i].value)
 	end
 end
 
