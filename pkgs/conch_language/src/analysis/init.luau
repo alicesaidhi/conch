@@ -591,7 +591,7 @@ local function match_eval_value(
 
 		for _, field in type.fields do
 			if match_eval_value(value, field, exact) then
-				table.insert(matching, type)
+				table.insert(matching, field)
 			end
 		end
 
