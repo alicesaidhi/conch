@@ -731,6 +731,7 @@ local function match(
 		local var = root
 
 		for _, suffix in node.suffixes do
+			if var == null then break end
 			if suffix.kind == "expression_index" then
 				local key = evaluate_expression(suffix.node.value)
 				local ok, result = pcall(rawget, var, key :: any)
@@ -744,6 +745,8 @@ local function match(
 			end
 		end
 
+		-- only known once it runs, so it could be anything
+		if var == null then return type end
 		return match_eval_value(var, type, exact)
 	elseif type.kind == "command" then
 		return if node.kind == "command" then type else nil
@@ -779,7 +782,9 @@ local function match(
 		or type.kind == "literal"
 		or type.kind == "table"
 	then
-		return match_eval_value(evaluate_expression(node), type, exact)
+		local value = evaluate_expression(node)
+		if value == null then return type end
+		return match_eval_value(value, type, exact)
 	end
 
 	return nil
@@ -1150,6 +1155,8 @@ local function choose_command(
 			if
 				not arg_type
 				or arg_type.type
+					-- the argument under the cursor is still being typed
+					and span_cursor(state, arg.span) ~= "within"
 					and not match(state, arg, arg_type.type, true)
 			then
 				bad = true
