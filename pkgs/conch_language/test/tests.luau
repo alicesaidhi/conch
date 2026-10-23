@@ -541,6 +541,45 @@ t.TEST("treewalker", function()
 	}
 
 	CASE_TREE {
+		name = "lambda arguments",
+		input = "value = 1\n\z
+		var = |value| { }\n\z
+		$var 2\n\z
+		meow $value",
+		match = { 1 },
+	}
+
+	CASE_TREE {
+		name = "lambda recursion",
+		input = "fact = |n| { if ($n <= 1) { return 1 } else { return (&$fact ($n - 1)) * $n } }\n\z
+		meow (&$fact 5)",
+		match = { 120 },
+	}
+
+	CASE_TREE {
+		name = "lambda closures",
+		input = "make = |n| { return || { return $n } }\n\z
+		a = &$make 1\n\z
+		b = &$make 2\n\z
+		meow (&$a) (&$b)",
+		match = { 1, 2 },
+	}
+
+	CASE_TREE {
+		name = "return local",
+		input = "var = || { value = 5; return $value }\n\z
+		meow (&$var)",
+		match = { 5 },
+	}
+
+	CASE_TREE {
+		name = "early return",
+		input = "var = |value| { if ($value) { return 1 } return 2 }\n\z
+		meow (&$var true) (&$var false)",
+		match = { 1, 2 },
+	}
+
+	CASE_TREE {
 		name = "if statement",
 		input = "var = 1\n\z
 		if ($var == 1) { meow 2 }",
@@ -618,6 +657,22 @@ if ($var == 1) {
 		for ({ 1, 2, 3 }) |key, value| { n = ($n + $value) }\n\z
 		meow $n",
 		match = { 6 },
+	}
+
+	CASE_TREE {
+		name = "for loop break in lambda",
+		input = "var = || { n = 0\n\z
+		for ({ 1, 2, 3 }) |key, value| { if ($value == 2) { break } n = $n + 1 }\n\z
+		return $n }\n\z
+		meow (&$var)",
+		match = { 1 },
+	}
+
+	CASE_TREE {
+		name = "for loop return",
+		input = "var = || { for ({ 1, 2, 3 }) |key, value| { return $value } }\n\z
+		meow (&$var)",
+		match = { 1 },
 	}
 
 	CASE_TREE {

@@ -30,7 +30,7 @@ export type ExecutionState = {
 	globals: { [string]: unknown },
 	trace: { Trace },
 	scope: Scope,
-	last_statement: { scope: Scope, node: ast.LastStatement }?,
+	last_statement: { node: ast.LastStatement, values: { unknown } }?,
 }
 
 type Expression = ast.Expression | ast.ExpressionCommand
@@ -102,6 +102,7 @@ local function pop_trace(state: ExecutionState) table.remove(state.trace) end
 
 local function reset_state(state: ExecutionState)
 	table.clear(state.trace)
+	state.last_statement = nil
 
 	while not state.scope.root do
 		state.scope = state.scope.up
@@ -176,7 +177,11 @@ local function call(state: ExecutionState, node: Node, fn: any, ...: any)
 			if name == true then nil else name,
 			node.span.z
 		)
+		local thread = coroutine.running()
+		local calling_machine = using_machine[thread]
+		using_machine[thread] = state
 		local result = table.pack(fn(...))
+		using_machine[thread] = calling_machine
 		pop_trace(state)
 		return result
 	end
@@ -323,7 +328,11 @@ local function evaluate_command(
 		)
 	end
 
-	return call(state, node, command, unpack(arguments))
+	local result = call(state, node, command, unpack(arguments))
+	-- how a lambda ended only matters to a for loop running it as its body
+	state.last_statement = nil
+
+	return result
 end
 
 local function evaluate_table(
@@ -557,16 +566,12 @@ local function evaluate_lambda(
 	state: ExecutionState,
 	node: ast.ExpressionLambda
 )
-	local original_scope = {
-		vars = state.scope.vars,
-		root = true,
-		up = state.scope.up,
-	}
+	local original_scope = state.scope
 
 	local function conch_guest_fn(...: any): ...unknown
 		local scope: Scope = {
-			vars = original_scope.vars,
-			up = original_scope.up,
+			vars = {},
+			up = original_scope,
 			root = true :: true,
 		}
 
@@ -588,26 +593,13 @@ local function evaluate_lambda(
 
 		visit_block(state, node.body.block.value)
 
-		if state.last_statement then
-			local lstat = state.last_statement.node
+		local lstat = state.last_statement
 
-			if lstat.kind ~= "return" then
-				if calling_machine then
-					calling_machine.last_statement =
-						{ scope = scope, node = lstat }
-				end
-				return
-			end
+		if lstat then
+			if calling_machine then calling_machine.last_statement = lstat end
+			if lstat.node.kind ~= "return" then return end
 
-			local values = {}
-
-			for idx, value in lstat.values do
-				local node = value.value
-				if not node then continue end
-				values[idx] = evaluate_expression(state, node)
-			end
-
-			return unpack(values, 1, #lstat.values)
+			return unpack(lstat.values, 1, #lstat.node.values)
 		end
 
 		return
@@ -771,7 +763,16 @@ local function visit_stat_if(state: ExecutionState, node: ast.If)
 end
 
 local function visit_lstat(state: ExecutionState, node: ast.LastStatement)
-	state.last_statement = { node = node, scope = state.scope }
+	local values = {}
+
+	if node.kind == "return" then
+		for idx, value in node.values do
+			if not value.value then continue end
+			values[idx] = evaluate_expression(state, value.value)
+		end
+	end
+
+	state.last_statement = { node = node, values = values }
 end
 
 local results = {}
@@ -803,7 +804,9 @@ function visit_block(state: ExecutionState, node: ast.Block, inherit: boolean?)
 		if state.last_statement then break end
 	end
 
-	if node.last_statement then visit_lstat(state, node.last_statement) end
+	if node.last_statement and not state.last_statement then
+		visit_lstat(state, node.last_statement)
+	end
 
 	if not state.scope.up then return result end
 	state.scope = state.scope.up
@@ -848,19 +851,7 @@ local function execute(state: ExecutionState, ast: ast.Ast): ExecutionResult
 	if not lstat then return result_ok end
 	if lstat.node.kind ~= "return" then return result_ok end
 
-	result_ok.values = table.create(#lstat.node.values, nil :: unknown)
-	assert(result_ok.values)
-
-	for idx, value in lstat.node.values do
-		if not value.value then continue end
-
-		ok, err = pcall(evaluate_expression, state, value.value)
-		if not ok then
-			reset_state(state)
-			return { ok = false, err = err:gsub(PATTERN_REMOVE_TRACE, "") }
-		end
-		result_ok.values[idx] = err
-	end
+	result_ok.values = lstat.values
 
 	return result_ok
 end
