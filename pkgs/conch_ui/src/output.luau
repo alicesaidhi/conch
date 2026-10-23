@@ -128,11 +128,11 @@ local function write(self: Stream, input: buffer)
 
 	local function consume()
 		i += 1
-		return if i - 1 > len_input then 0 else buffer.readu8(input, i - 1)
+		return if i - 1 >= len_input then 0 else buffer.readu8(input, i - 1)
 	end
 
 	local function peek()
-		return if i > len_input then 0 else buffer.readu8(input, i)
+		return if i >= len_input then 0 else buffer.readu8(input, i)
 	end
 
 	local function is_escapecode_stop()
