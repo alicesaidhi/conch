@@ -1210,7 +1210,7 @@ local function parse(input: buffer): Output
 				local left_priority, right_priority =
 					binary_operator_priority(binop)
 
-				if left_priority < limit then break end
+				if left_priority <= limit then break end
 
 				consume()
 
