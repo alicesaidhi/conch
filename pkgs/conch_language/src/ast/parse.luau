@@ -528,19 +528,27 @@ local function parse(input: buffer): Output
 
 	local function separated<T>(
 		fn: () -> T,
-		delimiter: ast.TokenKindRest?
+		delimiter: ast.TokenKindRest?,
+		ends_at_newline: boolean?
 	): ast.Separated<T>
 		local values = {}
 
+		-- is_delimiter skips newlines, so they're checked before it
 		while
-			not is_delimiter() and not (delimiter and current_is(delimiter))
+			not (ends_at_newline and current_kind == "\n")
+			and not is_delimiter()
+			and not (delimiter and current_is(delimiter))
 		do
 			skip_current()
 
 			local current_column = current_pos
 			local current_line = line
 			local value = fn()
-			local separator = if current_is "," then expect "," else nil
+			local separator = if ends_at_newline
+					and current_kind == "\n"
+				then nil
+				elseif current_is "," then expect ","
+				else nil
 
 			table.insert(values, {
 				value = value,
@@ -551,6 +559,9 @@ local function parse(input: buffer): Output
 					current_line
 				),
 			})
+
+			-- a comma carries the list over to the next line
+			if ends_at_newline and separator then skip_current() end
 		end
 
 		return values
@@ -590,9 +601,15 @@ local function parse(input: buffer): Output
 			end
 		end
 
+		local last_statement = parse_last_statement()
+
+		while current_kind == ";" do
+			consume()
+		end
+
 		return {
 			body = body,
-			last_statement = parse_last_statement(),
+			last_statement = last_statement,
 			span = vector.create(start, current_pos),
 		}
 	end
@@ -628,7 +645,7 @@ local function parse(input: buffer): Output
 			}
 		elseif current_is "return" then
 			local token = expect_fatal "return"
-			local values = separated(parse_expression_command)
+			local values = separated(parse_expression_command, nil, true)
 
 			local node: ast.Return = {
 				kind = "return" :: "return",
@@ -1384,6 +1401,9 @@ local function parse(input: buffer): Output
 	end
 
 	local result = { block = parse_block_node() }
+
+	-- after another issue, what's left is usually caused by that issue
+	if #issues == 0 and not current_is "eof" then expected_but "eof" end
 
 	if #issues > 0 then
 		error {
