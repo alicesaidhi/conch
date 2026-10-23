@@ -352,7 +352,8 @@ local function wrap<T...>(fn: (T...) -> ()): (T...) -> string
 
 		fn(...)
 
-		return buffer.readstring(buf, 0, pos - 1)
+		-- only the whitespace written after the last token gets cut
+		return (string.gsub(buffer.readstring(buf, 0, pos), "%s+$", ""))
 	end
 end
 
