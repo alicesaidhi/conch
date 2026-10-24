@@ -310,15 +310,13 @@ local function evaluate_command(
 	node: ast.Command
 ): { n: number, [number]: unknown }
 	local arguments = {}
+	local n = 0
 
 	for idx, argument in node.arguments do
-		table.move(
-			{ evaluate_expression(state, argument) },
-			1,
-			8000,
-			idx,
-			arguments
-		)
+		local values = table.pack(evaluate_expression(state, argument))
+		arguments[idx] = values[1]
+		table.move(values, 2, values.n, idx + 1, arguments)
+		n = idx + values.n - 1
 	end
 
 	local command = evaluate_var(state, node.var)
@@ -332,7 +330,7 @@ local function evaluate_command(
 		)
 	end
 
-	local result = call(state, node, command, unpack(arguments))
+	local result = call(state, node, command, unpack(arguments, 1, n))
 	-- how a lambda ended only matters to a for loop running it as its body
 	state.last_statement = nil
 
