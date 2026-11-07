@@ -1,16 +1,19 @@
 **/luau_packages/
 **/lune_packages/
 **/roblox_packages/
-**/packages
+**/pkgs
 **/pesde.lock
 **/node_modules/
 **/network/server.luau
 **/network/client.luau
 **/dist
 **/default.project.json
-pkgs/_foreign_*
-!pkgs/conch_standalone/default.project.json
-!pkgs/plugin/default.project.json
+!packages/conch_standalone/default.project.json
+!packages/plugin/default.project.json
+
+example/Packages
+
+aya.exe
 
 /out
 /local

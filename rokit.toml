@@ -4,8 +4,9 @@
 # New tools can be added by running `rokit add <tool>` in a terminal.
 
 [tools]
-pesde = "daimond113/pesde@0.6.2+registry.0.2.2"
 rojo = "rojo-rbx/rojo@7.7.0"
-lune = "lune-org/lune@0.8.9"
+lune = "lune-org/lune@0.10.5"
 wally = "UpliftGames/wally@0.3.2"
-StyLua = "johnnymorganz/stylua@2.3.1"
+StyLua = "johnnymorganz/stylua@2.5.2"
+lute = "luau-lang/lute@1.0.1-nightly.20261009"
+aya = "coconut-crew/aya@0.0.0-b"
