@@ -1,0 +1,8 @@
+name = "conch_standalone"
+entry_point = "lib.luau"
+
+[dependency.conch]
+from_path = "../conch"
+
+[dependency.ui]
+from_path = "../conch_ui"
