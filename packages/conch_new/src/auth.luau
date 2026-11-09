@@ -5,6 +5,13 @@ export type Permission = string
 
 export type RoleArchetypeKey = string
 
+export type AuthHook = (
+	user: User,
+	required_permissions: { Permission }
+) -> string?
+
+const PERMISSION_CALLBACK_HOOKS: { AuthHook } = {}
+
 const SUPER_USER: Role = "super-user"
 const SAVE_STATE: Role = "save-state"
 
@@ -102,3 +109,70 @@ const function get_permissions_for_roles(
 		return ROLE_SET_ARCHETYPES[archetype]
 	end
 end
+
+const function has_permissions(roles: { Role }, permissions: { Permission })
+	const perms_roles_have = get_permissions_for_roles(roles)
+	for _, permission in permissions do
+		if perms_roles_have[permission] ~= true then
+			return false
+		end
+	end
+
+	return true
+end
+
+const function determine_permissions(
+	user: users.User,
+	permissions: { Permission }
+): (boolean, string)
+	for _, hook in PERMISSION_CALLBACK_HOOKS do
+		const why = hook(user, permissions)
+
+		if why ~= nil then
+			return false, why
+		end
+	end
+
+	return true
+end
+
+const function hook_before_run(callback)
+	table.insert(PERMISSION_CALLBACK_HOOKS, callback)
+end
+
+const function check_user_permissions(
+	user: users.User,
+	required: { Permission }
+)
+	const permissions = get_permissions_for_roles(user.roles)
+	const missing = {}
+
+	for _, permission in required do
+		if permissions[permission] ~= true then
+			table.insert(missing, permission)
+		end
+	end
+
+	return if #missing == 0
+		then nil
+		else `missing the following required permissions: {table.concat(
+			missing,
+			", "
+		)}`
+end
+
+hook_before_run(check_user_permissions)
+
+return {
+	set_permissions = set_permissions,
+	get_permissions_for_role = get_permissions_for_role,
+	get_permissions_for_roles = get_permissions_for_roles,
+	hook_before_run = hook_before_run,
+	has_permissions = has_permissions,
+
+	SUPER_USER = SUPER_USER,
+	VIEW_FULL_SERVER_LOGS = VIEW_FULL_SERVER_LOGS,
+	ANYONE_CAN_EXECUTE = ANYONE_CAN_EXECUTE,
+	UNBOUNDED = UNBOUNDED,
+	SAVE_STATE = SAVE_STATE,
+}

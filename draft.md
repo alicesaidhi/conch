@@ -11,11 +11,9 @@ conch.users.server_user: User
 conch.auth.set_permissions(role, permissions: {})
 conch.auth.get_permissions_for_role(role)
 conch.auth_get_permissions_for_player(player)
-conch.auth.overwrite_permission_callback(callback)
 conch.auth.recheck_permissions_for(user)
 conch.auth.hook_before_run(fn)
 conch.auth.has_permissions(user, ...)
-conch.auth.set_rate_limits(limits)
 conch.auth.SUPER_USER -- role, allows access to all commands
 conch.auth.VIEW_FULL_SERVER_LOGS -- permission to view server logs
 conch.auth.ANYONE_CAN_EXECUTE -- permission to allow everyone to execute a command
@@ -40,6 +38,10 @@ conch.command.get_commands()
 conch.output.log(string)
 
 conch.ayalog.sink
+
+conch.network.set_rate_limits(limits)
+
+conch.storage.enable()
 
 conch.types.player(name, desc)
 conch.types.players(name, desc)
