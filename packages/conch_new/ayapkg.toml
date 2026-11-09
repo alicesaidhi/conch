@@ -1,0 +1,5 @@
+name = "conch"
+entry_point = "src/init.luau"
+
+[dependency.language]
+from_path = "../conch_language"
